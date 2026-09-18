@@ -112,8 +112,9 @@
                     <div class="flex flex-wrap gap-2 text-[10px] text-slate-500">
                         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Present</span>
                         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Absent</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Late/Leave</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span> Holiday</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Late</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span> Leave</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-900"></span> Holiday</span>
                     </div>
                     <div id="user-calendar-grid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
                 </div>
@@ -262,11 +263,11 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block font-semibold text-slate-600 mb-1">Check-In</label>
-                        <input type="text" id="modal-in" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="08:00 AM">
+                        <input type="text" id="modal-in" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="09:17 PM">
                     </div>
                     <div>
                         <label class="block font-semibold text-slate-600 mb-1">Check-Out</label>
-                        <input type="text" id="modal-out" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="04:00 PM">
+                        <input type="text" id="modal-out" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="10:30 PM">
                     </div>
                 </div>
                 <div>
@@ -288,7 +289,7 @@
 
     <!-- JavaScript Application Engine -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzByxdiaqNyYtgbT3XYieTeRaHjyyvMPsRokvOC-wfp-320GV8-q4Xoq-szkb861Ww5/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLhMnjxjEk1DuxvUXabrQC_2nLq1-0lD2gKDlD8eP5rxMr6vyyz7qDbteaaw6Roy4f/exec";
 
         let currentUser = "";
         let attendanceRecords = [];
@@ -312,67 +313,61 @@
             }
         }
 
+        // ناردنی کات بە شێوازی HH:MM AM/PM لەسەر ناوچەی کاتی کوردستان (Asia/Baghdad)
         function getIraqISOString(date = new Date()) {
             try {
                 const options = { 
                     timeZone: 'Asia/Baghdad', 
-                    year: 'numeric', 
-                    month: '2-digit', 
-                    day: '2-digit', 
-                    hour: '2-digit', 
+                    hour: 'numeric', 
                     minute: '2-digit', 
-                    second: '2-digit', 
-                    hour12: false 
+                    hour12: true 
                 };
-                const formatter = new Intl.DateTimeFormat('en-CA', options);
-                const parts = formatter.formatToParts(date);
-                const partMap = {};
-                parts.forEach(p => partMap[p.type] = p.value);
-                
-                return `${partMap.year}-${partMap.month}-${partMap.day}T${partMap.hour}:${partMap.minute}:${partMap.second}.000+03:00`;
+                return new Intl.DateTimeFormat('en-US', options).format(date);
             } catch (e) {
-                return new Date().toISOString();
+                return "12:00 AM";
             }
         }
 
         function getCheckoutISOString(checkInDateStr, date = new Date()) {
             try {
-                const optionsTime = { 
+                const options = { 
                     timeZone: 'Asia/Baghdad', 
-                    hour: '2-digit', 
+                    hour: 'numeric', 
                     minute: '2-digit', 
-                    second: '2-digit', 
-                    hour12: false 
+                    hour12: true 
                 };
-                const formatterTime = new Intl.DateTimeFormat('en-CA', optionsTime);
-                const partsTime = formatterTime.formatToParts(date);
-                const partMapTime = {};
-                partsTime.forEach(p => partMapTime[p.type] = p.value);
-                
-                let baseDate = getIraqLocalDateString();
-                if (checkInDateStr) {
-                    baseDate = checkInDateStr.split('T')[0];
-                }
-                
-                return `${baseDate}T${partMapTime.hour}:${partMapTime.minute}:${partMapTime.second}.000+03:00`;
+                return new Intl.DateTimeFormat('en-US', options).format(date);
             } catch (e) {
-                return new Date().toISOString();
+                return "12:00 PM";
             }
         }
 
+        // فۆرماتکردنی کات بۆ 12 کاتژمێری لەگەڵ AM/PM لەسەر ناوچەی کاتی کوردستان (Asia/Baghdad)
         function formatTime(timeString) {
             if (!timeString || timeString.includes('1899') || timeString === '-') return '-';
             try {
-                const dateObj = new Date(timeString);
-                if (isNaN(dateObj.getTime())) {
+                let dateObj;
+                if (timeString.includes('T')) {
+                    dateObj = new Date(timeString);
+                } else if (timeString.includes('AM') || timeString.includes('PM')) {
                     return timeString;
+                } else if (timeString.length >= 5 && timeString.includes(':')) {
+                    const todayStr = getIraqLocalDateString();
+                    dateObj = new Date(`${todayStr}T${timeString}:00.000+03:00`);
+                } else {
+                    dateObj = new Date(timeString);
                 }
-                return dateObj.toLocaleTimeString('en-US', { 
-                    timeZone: 'Asia/Baghdad',
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    hour12: true 
-                });
+
+                if (!isNaN(dateObj.getTime())) {
+                    const options = { 
+                        timeZone: 'Asia/Baghdad', 
+                        hour: 'numeric', 
+                        minute: '2-digit', 
+                        hour12: true 
+                    };
+                    return new Intl.DateTimeFormat('en-US', options).format(dateObj);
+                }
+                return timeString;
             } catch (error) {
                 return timeString;
             }
@@ -394,7 +389,7 @@
                 if (recordDate < today && hasCheckedIn && hasNotCheckedOut) {
                     return {
                         ...record,
-                        checkOut: `${recordDate}T23:59:59.000+03:00`,
+                        checkOut: `11:59 PM`,
                         note: record.note 
                             ? `${record.note} (Auto-closed at midnight)` 
                             : 'Auto-closed at midnight'
@@ -627,20 +622,20 @@
                     const hasCheckedIn = rec.checkIn && rec.checkIn !== '-' && !rec.checkIn.includes('1899');
                     const hasCheckedOut = rec.checkOut && rec.checkOut !== '-' && !rec.checkOut.includes('1899');
 
-                    if (hasCheckedIn && hasCheckedOut) {
+                    if (rec.status === 'Leave') {
+                        bgClass = "bg-indigo-400 text-white font-bold";
+                        titleAttr = "On Leave";
+                    } else if (hasCheckedIn && hasCheckedOut) {
                         bgClass = "bg-emerald-500 text-white font-bold";
-                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[7px] block font-mono opacity-90">In:${inTime}</span><span class="text-[7px] block font-mono opacity-90">Out:${outTime}</span>`;
+                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[6px] block font-mono opacity-90">In:${inTime}</span><span class="text-[6px] block font-mono opacity-90">Out:${outTime}</span>`;
                         titleAttr = `Completed: In ${inTime} | Out ${outTime}`;
                     } else if (hasCheckedIn && !hasCheckedOut) {
                         bgClass = "bg-amber-400 text-slate-900 font-bold";
-                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[8px] block font-mono font-semibold">In:${inTime}</span>`;
+                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[7px] block font-mono font-semibold">In:${inTime}</span>`;
                         titleAttr = `On Duty / Not Checked-Out: In ${inTime}`;
                     } else if (rec.status === 'Absent') {
                         bgClass = "bg-rose-500 text-white font-bold";
                         titleAttr = "Absent";
-                    } else if (rec.status === 'Leave') {
-                        bgClass = "bg-indigo-400 text-white font-bold";
-                        titleAttr = "On Leave";
                     }
                 } else {
                     const todayStr = getIraqLocalDateString();
@@ -698,20 +693,20 @@
                     const hasCheckedIn = rec.checkIn && rec.checkIn !== '-' && !rec.checkIn.includes('1899');
                     const hasCheckedOut = rec.checkOut && rec.checkOut !== '-' && !rec.checkOut.includes('1899');
 
-                    if (hasCheckedIn && hasCheckedOut) {
+                    if (rec.status === 'Leave') {
+                        bgClass = "bg-indigo-400 text-white font-bold";
+                        titleAttr = "On Leave";
+                    } else if (hasCheckedIn && hasCheckedOut) {
                         bgClass = "bg-emerald-500 text-white font-bold";
-                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[7px] block font-mono opacity-90">In:${inTime}</span><span class="text-[7px] block font-mono opacity-90">Out:${outTime}</span>`;
+                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[6px] block font-mono opacity-90">In:${inTime}</span><span class="text-[6px] block font-mono opacity-90">Out:${outTime}</span>`;
                         titleAttr = `Completed: In ${inTime} | Out ${outTime}`;
                     } else if (hasCheckedIn && !hasCheckedOut) {
                         bgClass = "bg-amber-400 text-slate-900 font-bold";
-                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[8px] block font-mono font-semibold">In:${inTime}</span>`;
+                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[7px] block font-mono font-semibold">In:${inTime}</span>`;
                         titleAttr = `On Duty / Not Checked-Out: In ${inTime}`;
                     } else if (rec.status === 'Absent') {
                         bgClass = "bg-rose-500 text-white font-bold";
                         titleAttr = "Absent";
-                    } else if (rec.status === 'Leave') {
-                        bgClass = "bg-indigo-400 text-white font-bold";
-                        titleAttr = "On Leave";
                     }
                 } else {
                     const todayStr = getIraqLocalDateString();
@@ -967,7 +962,7 @@
             }
 
             filteredRecords.forEach(row => {
-                let color = row.status === 'Present' ? 'bg-emerald-100 text-emerald-700' : (row.status === 'Late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700');
+                let color = row.status === 'Present' ? 'bg-emerald-100 text-emerald-700' : (row.status === 'Late' ? 'bg-amber-100 text-amber-700' : (row.status === 'Leave' ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-700'));
                 let cleanDateVal = formatDate(row.date);
                 let inTimeStr = formatTime(row.checkIn);
                 let outTimeStr = formatTime(row.checkOut);
@@ -1111,17 +1106,36 @@
                 await sendToSheet({ type: 'leaveStatus', id: String(req.id), status: action });
 
                 if (action === 'Approved') {
-                    const newAttRec = {
-                        id: String(Date.now()),
-                        name: req.name,
-                        date: getIraqLocalDateString(),
-                        checkIn: "-",
-                        checkOut: "-",
-                        status: "Leave",
-                        note: `Approved ${req.type || req.leaveType}`
-                    };
-                    attendanceRecords.push(newAttRec);
-                    await sendToSheet({ type: 'attendance', ...newAttRec });
+                    let startStr = "";
+                    let endStr = "";
+                    if (req.dates && req.dates.includes(' to ')) {
+                        const parts = req.dates.split(' to ');
+                        startStr = parts[0].trim();
+                        endStr = parts[1].trim();
+                    } else {
+                        startStr = getIraqLocalDateString();
+                        endStr = getIraqLocalDateString();
+                    }
+
+                    let curr = new Date(startStr);
+                    const last = new Date(endStr);
+
+                    while (curr <= last) {
+                        const dateFormatted = getIraqLocalDateString(curr);
+                        const newAttRec = {
+                            id: String(Date.now() + Math.random()),
+                            name: req.name,
+                            date: dateFormatted,
+                            checkIn: "-",
+                            checkOut: "-",
+                            status: "Leave",
+                            note: `Approved ${req.type || req.leaveType}`
+                        };
+                        attendanceRecords.push(newAttRec);
+                        await sendToSheet({ type: 'attendance', ...newAttRec });
+                        
+                        curr.setDate(curr.getDate() + 1);
+                    }
                 }
             }
             updateAdminDashboard();
@@ -1168,7 +1182,6 @@
             alert("Holiday added successfully and applied to all calendars!");
         }
 
-        // چارەسەرکراو: سڕینەوەی پشوو هەم لە ڕووکار و هەم لە شیتەکە
         async function removeHoliday(index) {
             const targetHoliday = holidays[index];
             if (!targetHoliday) return;
@@ -1177,18 +1190,15 @@
                 return;
             }
 
-            // سڕینەوە لە لیستی ناوخۆیی
             holidays.splice(index, 1);
             renderAdminHolidays();
 
-            // ناردنی داواکاری بۆ شیت بۆ سڕینەوە لەوێش
             await sendToSheet({
                 type: 'deleteHoliday',
                 date: targetHoliday.date,
                 name: targetHoliday.name
             });
 
-            // نوێکردنەوەی داتاکان
             await fetchSheetData();
             renderAdminHolidays();
         }
