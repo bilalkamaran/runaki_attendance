@@ -295,6 +295,7 @@
         let holidays = [];
         let leaveRequests = [];
         let systemUsers = [];
+
         let leaveFilterByMonth = true;
 
         function getIraqLocalDateString(date = new Date()) {
@@ -307,7 +308,9 @@
             if (!timeString || timeString.includes('1899') || timeString === '-') return '-';
             try {
                 const dateObj = new Date(timeString);
-                if (isNaN(dateObj.getTime())) return timeString;
+                if (isNaN(dateObj.getTime())) {
+                    return timeString;
+                }
                 return dateObj.toLocaleTimeString('en-US', { 
                     timeZone: 'Asia/Baghdad',
                     hour: '2-digit', 
@@ -336,7 +339,9 @@
                     return {
                         ...record,
                         checkOut: `${recordDate}T23:59:59.000Z`,
-                        note: record.note ? `${record.note} (Auto-closed at midnight)` : 'Auto-closed at midnight'
+                        note: record.note 
+                            ? `${record.note} (Auto-closed at midnight)` 
+                            : 'Auto-closed at midnight'
                     };
                 }
                 return record;
@@ -387,31 +392,9 @@
             }
         }
 
-        // پاراستنی دۆخی لۆگین و پەنجەرەی ئێستا لە کاتی ڕێفریشدا بە تەنها بۆ هەمان پەنجەرە/تاب
+        // لێرەدا پشکنینی خۆکار لادرا تاوەکو هەمیشە داوای لۆگین (ڕەمز و یوزەرنەم) بکات کاتێک پەیجەکە دەکرێتەوە
         window.addEventListener('DOMContentLoaded', async () => {
             await fetchSheetData();
-            
-            const savedUser = sessionStorage.getItem('runaki_logged_user');
-            const savedView = sessionStorage.getItem('runaki_current_view');
-            const savedAdminTab = sessionStorage.getItem('runaki_admin_tab') || 'attendance';
-
-            if (savedUser && savedView) {
-                currentUser = savedUser;
-                const foundUser = systemUsers.find(x => x.name === currentUser);
-                const container = document.getElementById('app-container');
-
-                if (savedView === 'admin' || (foundUser && foundUser.role && foundUser.role.toLowerCase() === 'admin')) {
-                    container.classList.remove('max-w-md');
-                    container.classList.add('max-w-3xl');
-                    document.getElementById('login-view').classList.add('hidden');
-                    document.getElementById('admin-dashboard').classList.remove('hidden');
-                    document.getElementById('admin-filter-month').value = getIraqLocalDateString().slice(0, 7);
-                    updateAdminDashboard();
-                    switchAdminTab(savedAdminTab);
-                } else if (savedView === 'user') {
-                    setupUserDashboardSession();
-                }
-            }
         });
 
         async function handleLogin() {
@@ -424,10 +407,6 @@
             const container = document.getElementById('app-container');
 
             if ((u === 'admin' && p === 'admin123') || (foundUser && foundUser.role && foundUser.role.toLowerCase() === 'admin')) {
-                currentUser = foundUser ? foundUser.name : "Admin";
-                sessionStorage.setItem('runaki_logged_user', currentUser);
-                sessionStorage.setItem('runaki_current_view', 'admin');
-
                 container.classList.remove('max-w-md');
                 container.classList.add('max-w-3xl');
                 document.getElementById('login-view').classList.add('hidden');
@@ -435,15 +414,11 @@
                 
                 document.getElementById('admin-filter-month').value = getIraqLocalDateString().slice(0, 7);
                 updateAdminDashboard();
-                switchAdminTab('attendance');
                 return;
             }
 
             if (foundUser) {
                 currentUser = foundUser.name;
-                sessionStorage.setItem('runaki_logged_user', currentUser);
-                sessionStorage.setItem('runaki_current_view', 'user');
-
                 setupUserDashboardSession();
             } else {
                 alert('Invalid username or password!');
@@ -466,14 +441,10 @@
         }
 
         function logout() {
-            sessionStorage.removeItem('runaki_logged_user');
-            sessionStorage.removeItem('runaki_current_view');
-            sessionStorage.removeItem('runaki_admin_tab');
-
             const container = document.getElementById('app-container');
             container.classList.remove('max-w-3xl');
             container.classList.add('max-w-md');
-            document.getElementById('login-view').classList.remove('hidden');
+            document.getElementById('login-view').classList.add('hidden');
             document.getElementById('user-dashboard').classList.add('hidden');
             document.getElementById('admin-dashboard').classList.add('hidden');
             document.getElementById('login-user').value = '';
@@ -740,7 +711,6 @@
         let currentDrilldownUser = "";
 
         function switchAdminTab(tab) {
-            sessionStorage.setItem('runaki_admin_tab', tab);
             closeAdminDrilldown();
             const att = document.getElementById('admin-tab-attendance');
             const lea = document.getElementById('admin-tab-leaves');
