@@ -288,7 +288,7 @@
 
     <!-- JavaScript Application Engine -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWi7gTiiREJ89UJjQ8EhXAP6AksBa2DOFwhZbwkI9ebx84Drl0A6eTtqyyVsPPwTv3/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqABeeZMBdZOimlIEGQGxCr14md83pf1flZxU7VTQQbt_GOfMruLiGzVVUfAZmwnBH/exec";
 
         let currentUser = "";
         let attendanceRecords = [];
@@ -299,9 +299,65 @@
         let leaveFilterByMonth = true;
 
         function getIraqLocalDateString(date = new Date()) {
-            const options = { timeZone: 'Asia/Baghdad', year: 'numeric', month: '2-digit', day: '2-digit' };
-            const formatter = new Intl.DateTimeFormat('en-CA', options);
-            return formatter.format(date);
+            try {
+                const options = { timeZone: 'Asia/Baghdad', year: 'numeric', month: '2-digit', day: '2-digit' };
+                const formatter = new Intl.DateTimeFormat('en-CA', options);
+                return formatter.format(date);
+            } catch (e) {
+                const d = new Date(date);
+                const year = d.getFullYear();
+                const month = String(d.getMonth() + 1).padStart(2, '0');
+                const day = String(d.getDate()).padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            }
+        }
+
+        function getIraqISOString(date = new Date()) {
+            try {
+                const options = { 
+                    timeZone: 'Asia/Baghdad', 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit', 
+                    hour12: false 
+                };
+                const formatter = new Intl.DateTimeFormat('en-CA', options);
+                const parts = formatter.formatToParts(date);
+                const partMap = {};
+                parts.forEach(p => partMap[p.type] = p.value);
+                
+                return `${partMap.year}-${partMap.month}-${partMap.day}T${partMap.hour}:${partMap.minute}:${partMap.second}.000+03:00`;
+            } catch (e) {
+                return new Date().toISOString();
+            }
+        }
+
+        function getCheckoutISOString(checkInDateStr, date = new Date()) {
+            try {
+                const optionsTime = { 
+                    timeZone: 'Asia/Baghdad', 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit', 
+                    hour12: false 
+                };
+                const formatterTime = new Intl.DateTimeFormat('en-CA', optionsTime);
+                const partsTime = formatterTime.formatToParts(date);
+                const partMapTime = {};
+                partsTime.forEach(p => partMapTime[p.type] = p.value);
+                
+                let baseDate = getIraqLocalDateString();
+                if (checkInDateStr) {
+                    baseDate = checkInDateStr.split('T')[0];
+                }
+                
+                return `${baseDate}T${partMapTime.hour}:${partMapTime.minute}:${partMapTime.second}.000+03:00`;
+            } catch (e) {
+                return new Date().toISOString();
+            }
         }
 
         function formatTime(timeString) {
@@ -338,7 +394,7 @@
                 if (recordDate < today && hasCheckedIn && hasNotCheckedOut) {
                     return {
                         ...record,
-                        checkOut: `${recordDate}T23:59:59.000Z`,
+                        checkOut: `${recordDate}T23:59:59.000+03:00`,
                         note: record.note 
                             ? `${record.note} (Auto-closed at midnight)` 
                             : 'Auto-closed at midnight'
@@ -392,7 +448,6 @@
             }
         }
 
-        // لێرەدا پشکنینی خۆکار لادرا تاوەکو هەمیشە داوای لۆگین (ڕەمز و یوزەرنەم) بکات کاتێک پەیجەکە دەکرێتەوە
         window.addEventListener('DOMContentLoaded', async () => {
             await fetchSheetData();
         });
@@ -528,6 +583,10 @@
             renderCalendarHelper(currentUser, 'user-calendar-month', 'user-calendar-grid');
         }
 
+        function renderAdminDrilldownCalendar() {
+            renderCalendarHelper(currentDrilldownUser, 'admin-drilldown-month', 'admin-drilldown-grid');
+        }
+
         function renderCalendarHelper(targetUser, monthInputId, gridId) {
             const ym = document.getElementById(monthInputId).value;
             if (!ym) return;
@@ -541,7 +600,7 @@
                 grid.innerHTML += `<div class="font-bold text-[10px] text-slate-400">${d}</div>`;
             });
 
-            const myRecords = attendanceRecords.filter(x => x.name === targetUser);
+            const myRecords = attendanceRecords.filter(x => x.name && x.name.trim().toLowerCase() === targetUser.trim().toLowerCase());
 
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayStr = String(day).padStart(2, '0');
@@ -561,14 +620,17 @@
                     let inTime = formatTime(rec.checkIn);
                     let outTime = formatTime(rec.checkOut);
 
-                    if (rec.status === 'Present') {
+                    const hasCheckedIn = rec.checkIn && rec.checkIn !== '-' && !rec.checkIn.includes('1899');
+                    const hasCheckedOut = rec.checkOut && rec.checkOut !== '-' && !rec.checkOut.includes('1899');
+
+                    if (hasCheckedIn && hasCheckedOut) {
                         bgClass = "bg-emerald-500 text-white font-bold";
-                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[6px] block font-mono opacity-90">In:${inTime}</span><span class="text-[6px] block font-mono opacity-90">Out:${outTime}</span>`;
-                        titleAttr = `Present: In ${inTime} | Out ${outTime}`;
-                    } else if (rec.status === 'Late') {
-                        bgClass = "bg-amber-400 text-white font-bold";
-                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[6px] block font-mono opacity-90">In:${inTime}</span><span class="text-[6px] block font-mono opacity-90">Out:${outTime}</span>`;
-                        titleAttr = `Late: In ${inTime} | Out ${outTime}`;
+                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[7px] block font-mono opacity-90">In:${inTime}</span><span class="text-[7px] block font-mono opacity-90">Out:${outTime}</span>`;
+                        titleAttr = `Completed: In ${inTime} | Out ${outTime}`;
+                    } else if (hasCheckedIn && !hasCheckedOut) {
+                        bgClass = "bg-amber-400 text-slate-900 font-bold";
+                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[8px] block font-mono font-semibold">In:${inTime}</span>`;
+                        titleAttr = `On Duty / Not Checked-Out: In ${inTime}`;
                     } else if (rec.status === 'Absent') {
                         bgClass = "bg-rose-500 text-white font-bold";
                         titleAttr = "Absent";
@@ -600,18 +662,24 @@
 
             if (!badge || !btn || !btnText) return;
 
-            const existingRec = attendanceRecords.find(x => x.name === currentUser && formatDate(x.date) === todayStr);
+            const existingRec = attendanceRecords.find(x => {
+                if (!x.name || !x.date) return false;
+                const matchName = x.name.trim().toLowerCase() === currentUser.trim().toLowerCase();
+                const matchDate = formatDate(x.date) === todayStr;
+                return matchName && matchDate;
+            });
 
-            const hasActiveCheckIn = existingRec && (!existingRec.checkOut || existingRec.checkOut === '-' || existingRec.checkOut.includes('1899'));
-            const isCompleted = existingRec && existingRec.checkOut && existingRec.checkOut !== '-' && !existingRec.checkOut.includes('1899');
+            const hasCheckedIn = existingRec && existingRec.checkIn && existingRec.checkIn !== '-' && !existingRec.checkIn.includes('1899');
+            const hasCheckedOut = existingRec && existingRec.checkOut && existingRec.checkOut !== '-' && !existingRec.checkOut.includes('1899');
 
-            if (isCompleted) {
+            if (hasCheckedIn && hasCheckedOut) {
+                const outTime = formatTime(existingRec.checkOut);
                 badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/20 text-slate-300 border border-slate-500/30";
-                badge.innerText = `Completed (${todayStr})`;
+                badge.innerText = `Checked-Out at ${outTime} (${todayStr})`;
                 btn.disabled = true;
-                btn.className = "w-full py-3 bg-slate-700 text-slate-400 font-bold rounded-xl text-sm cursor-not-allowed";
-                btnText.innerText = "Already Completed";
-            } else if (hasActiveCheckIn) {
+                btn.className = "w-full py-3 bg-slate-400 text-white font-bold rounded-xl text-sm cursor-not-allowed opacity-60";
+                btnText.innerText = "Already Completed Today";
+            } else if (hasCheckedIn && !hasCheckedOut) {
                 const formattedCheckInTime = formatTime(existingRec.checkIn);
                 badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
                 badge.innerText = `On Duty - ${todayStr} (${formattedCheckInTime})`;
@@ -630,18 +698,24 @@
         async function handleUserCheckInOut() {
             const todayStr = getIraqLocalDateString();
             const note = document.getElementById('user-checkin-note').value.trim();
-            const currentTime = new Date().toISOString();
+            const currentTime = getIraqISOString();
 
-            let existingRec = attendanceRecords.find(x => x.name === currentUser && formatDate(x.date) === todayStr);
-            const hasActiveCheckIn = existingRec && (!existingRec.checkOut || existingRec.checkOut === '-' || existingRec.checkOut.includes('1899'));
-            const isCompleted = existingRec && existingRec.checkOut && existingRec.checkOut !== '-' && !existingRec.checkOut.includes('1899');
+            // Check local memory first to prevent Google Sheet latency/race conditions
+            let existingRec = attendanceRecords.find(x => {
+                if (!x.name || !x.date) return false;
+                return x.name.trim().toLowerCase() === currentUser.trim().toLowerCase() && formatDate(x.date) === todayStr;
+            });
 
-            if (isCompleted) {
-                alert("You have already checked-in and checked-out for today!");
+            const hasCheckedIn = existingRec && existingRec.checkIn && existingRec.checkIn !== '-' && !existingRec.checkIn.includes('1899');
+            const hasCheckedOut = existingRec && existingRec.checkOut && existingRec.checkOut !== '-' && !existingRec.checkOut.includes('1899');
+
+            if (hasCheckedIn && hasCheckedOut) {
+                alert("You have already completed check-in and check-out for today!");
+                checkTodayAttendanceState();
                 return;
             }
 
-            if (!existingRec) {
+            if (!existingRec || !hasCheckedIn) {
                 const newRec = {
                     id: Date.now(),
                     name: currentUser,
@@ -651,15 +725,27 @@
                     status: note ? "Late" : "Present",
                     note: note
                 };
+                
                 attendanceRecords.push(newRec);
                 await sendToSheet({ type: 'attendance', ...newRec });
 
                 checkTodayAttendanceState();
                 refreshUserDashboardViews();
                 alert("Successfully Checked-In and synced!");
-            } else if (hasActiveCheckIn) {
-                existingRec.checkOut = currentTime;
-                await sendToSheet({ type: 'attendance', ...existingRec });
+            } else if (hasCheckedIn && !hasCheckedOut) {
+                const checkoutTime = getCheckoutISOString(existingRec.checkIn);
+                existingRec.checkOut = checkoutTime;
+
+                await sendToSheet({ 
+                    type: 'attendance', 
+                    id: existingRec.id,
+                    name: existingRec.name,
+                    date: existingRec.date,
+                    checkIn: existingRec.checkIn, 
+                    checkOut: checkoutTime,        
+                    status: existingRec.status,
+                    note: existingRec.note
+                });
 
                 checkTodayAttendanceState();
                 refreshUserDashboardViews();
@@ -777,12 +863,6 @@
         function closeAdminDrilldown() {
             document.getElementById('admin-employee-drilldown').classList.add('hidden');
             document.getElementById('admin-tab-attendance').classList.remove('hidden');
-        }
-
-        function renderAdminDrilldownCalendar() {
-            if (currentDrilldownUser) {
-                renderCalendarHelper(currentDrilldownUser, 'admin-drilldown-month', 'admin-drilldown-grid');
-            }
         }
 
         function updateAdminDashboard() {
