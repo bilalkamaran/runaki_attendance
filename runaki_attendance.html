@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Runaki - Attendance & Leave System</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 flex justify-center items-center min-h-screen p-0 sm:p-4">
+
+    <!-- Container -->
+    <div id="app-container" class="w-full max-w-md bg-white min-h-screen sm:min-h-[850px] sm:rounded-3xl shadow-2xl flex flex-col justify-between overflow-hidden relative border border-slate-200 transition-all duration-300">
+        
+        <!-- ================= 1. LOGIN VIEW ================= -->
+        <div id="login-view" class="flex-1 p-6 flex flex-col justify-center space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-indigo-600 text-white rounded-2xl mx-auto flex items-center justify-center text-2xl font-bold shadow-lg shadow-indigo-500/30">
+                    ⚡
+                </div>
+                <h1 class="text-2xl font-bold text-slate-800">Runaki Portal</h1>
+                <p class="text-xs text-slate-500">Sign in to access your attendance system</p>
+            </div>
+
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Username</label>
+                    <input type="text" id="login-user" class="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="Enter your username">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 mb-1">Password</label>
+                    <input type="password" id="login-pass" class="w-full border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-500" placeholder="••••••••">
+                </div>
+                <button onclick="handleLogin()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 rounded-xl text-sm transition-all shadow-lg shadow-indigo-600/30">
+                    Sign In
+                </button>
+            </div>
+        </div>
+
+        <!-- ================= 2. USER DASHBOARD VIEW ================= -->
+        <div id="user-dashboard" class="hidden flex-1 flex flex-col justify-between">
+            <header class="bg-indigo-600 text-white p-5 rounded-b-3xl shadow-md">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-xs text-indigo-200">Runaki Employee Portal</h1>
+                        <h2 class="text-xl font-bold" id="user-display-name">Employee Name</h2>
+                    </div>
+                    <button onclick="logout()" class="bg-indigo-500 hover:bg-indigo-400 p-2 rounded-full text-xs transition-all">🚪 Logout</button>
+                </div>
+            </header>
+
+            <main class="p-5 flex-1 overflow-y-auto space-y-5">
+                <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-5 rounded-2xl shadow-lg space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-medium text-slate-300">Today's Attendance</h3>
+                        <div id="user-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                            Not Checked-In
+                        </div>
+                    </div>
+                    <div>
+                        <input type="text" id="user-checkin-note" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl p-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400" placeholder="Add note / reason if late (optional)...">
+                    </div>
+                    <button id="user-action-btn" onclick="handleUserCheckInOut()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md text-sm">
+                        <span id="user-btn-text">Check-In Now</span>
+                    </button>
+                </div>
+
+                <!-- Request Leave Section -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                    <h4 class="font-bold text-slate-700 text-xs">🏖️ Request Leave / Vacation</h4>
+                    <div class="space-y-2 text-xs">
+                        <select id="leave-type" onchange="toggleLeaveFileField()" class="w-full border border-slate-200 rounded-xl p-2 bg-slate-50">
+                            <option value="Sick Leave">Sick Leave (Medical Report Required)</option>
+                            <option value="Unpaid Leave">Unpaid Leave</option>
+                            <option value="Annual Vacation">Annual Vacation</option>
+                        </select>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="date" id="leave-start" class="border border-slate-200 rounded-xl p-2">
+                            <input type="date" id="leave-end" class="border border-slate-200 rounded-xl p-2">
+                        </div>
+                        <div>
+                            <input type="text" id="leave-note" placeholder="Write a note or reason..." class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50">
+                        </div>
+                        <div id="leave-file-container">
+                            <label class="block text-[10px] font-semibold text-rose-500 mb-1">Attach Medical Report <span class="font-bold">* (Mandatory for Sick Leave)</span></label>
+                            <input type="file" id="leave-file" class="w-full border border-slate-200 rounded-xl p-1.5 bg-slate-50 text-[10px] file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        </div>
+                        <button onclick="submitLeaveRequest()" class="w-full bg-slate-800 text-white py-2 rounded-xl font-semibold hover:bg-slate-700 transition-all">Submit Leave Request</button>
+                    </div>
+                </div>
+
+                <!-- My Leave Requests History -->
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h4 onclick="toggleLeaveHistoryFilter()" id="user-leave-history-title" class="font-bold text-slate-700 text-xs cursor-pointer hover:text-indigo-600 transition-colors flex items-center gap-1 select-none" title="Click to toggle filter between All Time and Selected Month">
+                            📜 My Leave History <span id="leave-filter-mode-label" class="text-[9px] text-indigo-500 font-normal">(Filtered by Month 🔄)</span>
+                        </h4>
+                        <span id="user-leave-month-label" class="text-[10px] text-slate-400 font-mono"></span>
+                    </div>
+                    <div id="user-my-leaves-list" class="space-y-2 text-xs"></div>
+                </div>
+
+                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h4 class="font-bold text-slate-700 text-xs">📅 Monthly Calendar Status</h4>
+                        <input type="month" id="user-calendar-month" onchange="onUserMonthChange()" class="text-xs border border-slate-200 rounded-xl p-1.5 bg-slate-50 font-mono">
+                    </div>
+                    <div class="flex flex-wrap gap-2 text-[10px] text-slate-500">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Present</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Absent</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Late/Leave</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span> Holiday</span>
+                    </div>
+                    <div id="user-calendar-grid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ================= 3. ADMIN DASHBOARD VIEW ================= -->
+        <div id="admin-dashboard" class="hidden flex-1 flex flex-col justify-between">
+            <header class="bg-slate-900 text-white p-5 rounded-b-3xl shadow-md">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h1 class="text-xs text-slate-400">Runaki Admin Control Panel</h1>
+                        <h2 class="text-xl font-bold">Executive Suite & Management</h2>
+                    </div>
+                    <button onclick="logout()" class="bg-slate-800 hover:bg-slate-700 p-2 rounded-full text-xs transition-all">🚪 Logout</button>
+                </div>
+            </header>
+
+            <main class="p-5 flex-1 overflow-y-auto space-y-4">
+                
+                <!-- KPI Stat Cards -->
+                <div class="grid grid-cols-3 gap-2">
+                    <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
+                        <p class="text-[10px] text-slate-400 font-semibold uppercase">Total Staff</p>
+                        <h3 id="kpi-total" class="text-lg font-bold text-slate-800">0</h3>
+                    </div>
+                    <div class="bg-emerald-50 p-3 rounded-2xl border border-emerald-200 text-center">
+                        <p class="text-[10px] text-emerald-600 font-semibold uppercase">Today Presence</p>
+                        <h3 id="kpi-active" class="text-lg font-bold text-emerald-700">85%</h3>
+                    </div>
+                    <div class="bg-amber-50 p-3 rounded-2xl border border-amber-200 text-center">
+                        <p class="text-[10px] text-amber-600 font-semibold uppercase">Late Arrivals</p>
+                        <h3 id="kpi-late" class="text-lg font-bold text-amber-700">0</h3>
+                    </div>
+                </div>
+
+                <!-- Admin Action Tabs -->
+                <div class="flex bg-slate-200 p-1 rounded-xl text-xs font-semibold">
+                    <button onclick="switchAdminTab('attendance')" id="tab-btn-att" class="flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm transition-all">📋 Attendance</button>
+                    <button onclick="switchAdminTab('leaves')" id="tab-btn-lea" class="flex-1 py-2 rounded-lg text-slate-600 transition-all">🏖️ Leaves <span id="pending-badge" class="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[9px] hidden">0</span></button>
+                    <button onclick="switchAdminTab('users')" id="tab-btn-usr" class="flex-1 py-2 rounded-lg text-slate-600 transition-all">👥 Users</button>
+                    <button onclick="switchAdminTab('holidays')" id="tab-btn-hol" class="flex-1 py-2 rounded-lg text-slate-600 transition-all">🗓️ Holidays</button>
+                </div>
+
+                <!-- SUB-VIEW: EMPLOYEE MONTHLY DRILLDOWN -->
+                <div id="admin-employee-drilldown" class="hidden space-y-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-center border-b pb-2">
+                        <div>
+                            <h4 id="drilldown-title" class="font-bold text-slate-800 text-sm">Employee Name</h4>
+                            <p class="text-[10px] text-slate-400">Monthly Attendance Overview with exact In & Out times</p>
+                        </div>
+                        <button onclick="closeAdminDrilldown()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-xl text-xs font-semibold">⬅️ Back to Master</button>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs text-slate-500 font-semibold">Select Month:</span>
+                        <input type="month" id="admin-drilldown-month" onchange="renderAdminDrilldownCalendar()" class="text-xs border border-slate-200 rounded-xl p-1.5 bg-slate-50 font-mono">
+                    </div>
+                    <div id="admin-drilldown-grid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
+                </div>
+
+                <!-- TAB 1: ATTENDANCE & MONTHLY FILTER -->
+                <div id="admin-tab-attendance" class="space-y-3">
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-2">
+                        <div>
+                            <h4 class="font-bold text-slate-700 text-xs">Master Records</h4>
+                            <p class="text-[10px] text-slate-400">Filter by month or click name/pencil to edit</p>
+                        </div>
+                        <div class="flex items-center gap-2 w-full sm:w-auto">
+                            <input type="month" id="admin-filter-month" onchange="renderAdminMasterTable()" class="text-xs border border-slate-200 rounded-xl p-1.5 bg-white font-mono">
+                            <button onclick="exportExcel()" class="bg-emerald-600 text-white px-3 py-1.5 rounded-xl text-xs font-semibold">📥 Export</button>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
+                                <tr>
+                                    <th class="p-2.5">Name</th>
+                                    <th class="p-2.5">Date</th>
+                                    <th class="p-2.5">In / Out & Note</th>
+                                    <th class="p-2.5">Status</th>
+                                    <th class="p-2.5 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-master-table" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 2: LEAVE REQUESTS -->
+                <div id="admin-tab-leaves" class="hidden space-y-2">
+                    <h4 class="font-bold text-slate-700 text-xs">Pending Leave Applications</h4>
+                    <div id="admin-leaves-list" class="space-y-2"></div>
+                </div>
+
+                <!-- TAB 3: USERS TABLE -->
+                <div id="admin-tab-users" class="hidden space-y-3">
+                    <h4 class="font-bold text-slate-700 text-xs">Registered Employees / Users (Google Sheet Database)</h4>
+                    <div class="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-slate-50 text-slate-500 uppercase font-semibold">
+                                <tr>
+                                    <th class="p-2.5">ID</th>
+                                    <th class="p-2.5">Name</th>
+                                    <th class="p-2.5">Username</th>
+                                    <th class="p-2.5">Role</th>
+                                </tr>
+                            </thead>
+                            <tbody id="admin-users-table" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- TAB 4: HOLIDAY MANAGEMENT -->
+                <div id="admin-tab-holidays" class="hidden space-y-3">
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                        <h4 class="font-bold text-slate-700 text-xs">Set Official Company Holiday</h4>
+                        <div class="flex gap-2">
+                            <input type="date" id="new-holiday-date" class="flex-1 text-xs border border-slate-200 rounded-xl p-2 bg-white">
+                            <input type="text" id="new-holiday-name" placeholder="Holiday Title" class="flex-1 text-xs border border-slate-200 rounded-xl p-2 bg-white">
+                            <button onclick="addHoliday()" class="bg-indigo-600 text-white px-3 py-2 rounded-xl text-xs font-semibold">Add Holiday</button>
+                        </div>
+                    </div>
+                    <div id="admin-holidays-list" class="space-y-2 text-xs"></div>
+                </div>
+
+            </main>
+        </div>
+
+    </div>
+
+    <!-- Edit Attendance Modal -->
+    <div id="manual-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex justify-center items-center p-4 z-50">
+        <div class="bg-white w-full max-w-sm rounded-3xl p-6 space-y-4 shadow-2xl">
+            <h3 id="modal-title" class="font-bold text-slate-800 text-base">Edit Attendance</h3>
+            <input type="hidden" id="modal-record-id">
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Employee Name</label>
+                    <input type="text" id="modal-name" class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50" readonly>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Date</label>
+                    <input type="date" id="modal-date" class="w-full border border-slate-200 rounded-xl p-2.5">
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Check-In</label>
+                        <input type="text" id="modal-in" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="08:00 AM">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-600 mb-1">Check-Out</label>
+                        <input type="text" id="modal-out" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="04:00 PM">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-slate-600 mb-1">Status</label>
+                    <select id="modal-status" class="w-full border border-slate-200 rounded-xl p-2.5 bg-white">
+                        <option value="Present">Present</option>
+                        <option value="Late">Late</option>
+                        <option value="Absent">Absent</option>
+                        <option value="Leave">Leave</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeManualModal()" class="flex-1 bg-slate-100 text-slate-600 font-semibold py-2.5 rounded-xl text-xs">Cancel</button>
+                <button onclick="saveManualRecord()" class="flex-1 bg-indigo-600 text-white font-semibold py-2.5 rounded-xl text-xs">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Engine -->
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWi7gTiiREJ89UJjQ8EhXAP6AksBa2DOFwhZbwkI9ebx84Drl0A6eTtqyyVsPPwTv3/exec";
+
+        let currentUser = "";
+        let attendanceRecords = [];
+        let holidays = [];
+        let leaveRequests = [];
+        let systemUsers = [];
+        let leaveFilterByMonth = true;
+
+        function getIraqLocalDateString(date = new Date()) {
+            const options = { timeZone: 'Asia/Baghdad', year: 'numeric', month: '2-digit', day: '2-digit' };
+            const formatter = new Intl.DateTimeFormat('en-CA', options);
+            return formatter.format(date);
+        }
+
+        function formatTime(timeString) {
+            if (!timeString || timeString.includes('1899') || timeString === '-') return '-';
+            try {
+                const dateObj = new Date(timeString);
+                if (isNaN(dateObj.getTime())) return timeString;
+                return dateObj.toLocaleTimeString('en-US', { 
+                    timeZone: 'Asia/Baghdad',
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                });
+            } catch (error) {
+                return timeString;
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '-';
+            const cleanDate = dateString.toString().split('T')[0];
+            return cleanDate || '-';
+        }
+
+        function processAutoCheckouts(records) {
+            const today = getIraqLocalDateString();
+            return records.map(record => {
+                const recordDate = formatDate(record.date);
+                const hasCheckedIn = record.checkIn && record.checkIn !== '-' && !record.checkIn.includes('1899');
+                const hasNotCheckedOut = !record.checkOut || record.checkOut === '-' || record.checkOut.includes('1899');
+
+                if (recordDate < today && hasCheckedIn && hasNotCheckedOut) {
+                    return {
+                        ...record,
+                        checkOut: `${recordDate}T23:59:59.000Z`,
+                        note: record.note ? `${record.note} (Auto-closed at midnight)` : 'Auto-closed at midnight'
+                    };
+                }
+                return record;
+            });
+        }
+
+        async function fetchSheetData() {
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const data = await response.json();
+                
+                if (data.attendance && data.attendance.length > 1) {
+                    let rawAtt = data.attendance.slice(1).map(row => ({
+                        id: row[0], name: row[1], date: row[2], checkIn: row[3], checkOut: row[4], status: row[5], note: row[6]
+                    }));
+                    attendanceRecords = processAutoCheckouts(rawAtt);
+                }
+                if (data.leaves && data.leaves.length > 1) {
+                    leaveRequests = data.leaves.slice(1).map(row => ({
+                        id: row[0], name: row[1], type: row[2], dates: row[3], note: row[4], fileName: row[5], status: row[6]
+                    }));
+                }
+                if (data.holidays && data.holidays.length > 1) {
+                    holidays = data.holidays.slice(1).map(row => ({
+                        date: row[0], name: row[1]
+                    }));
+                }
+                if (data.users && data.users.length > 1) {
+                    systemUsers = data.users.slice(1).map(row => ({
+                        id: row[0], name: row[1], username: row[2], password: String(row[3]), role: row[4]
+                    }));
+                }
+            } catch (err) {
+                console.error("Error fetching from Google Sheet:", err);
+            }
+        }
+
+        async function sendToSheet(payload) {
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (err) {
+                console.error("Error sending to Google Sheet:", err);
+            }
+        }
+
+        // پاراستنی دۆخی لۆگین و پەنجەرەی ئێستا لە کاتی ڕێفریشدا بە تەنها بۆ هەمان پەنجەرە/تاب
+        window.addEventListener('DOMContentLoaded', async () => {
+            await fetchSheetData();
+            
+            const savedUser = sessionStorage.getItem('runaki_logged_user');
+            const savedView = sessionStorage.getItem('runaki_current_view');
+            const savedAdminTab = sessionStorage.getItem('runaki_admin_tab') || 'attendance';
+
+            if (savedUser && savedView) {
+                currentUser = savedUser;
+                const foundUser = systemUsers.find(x => x.name === currentUser);
+                const container = document.getElementById('app-container');
+
+                if (savedView === 'admin' || (foundUser && foundUser.role && foundUser.role.toLowerCase() === 'admin')) {
+                    container.classList.remove('max-w-md');
+                    container.classList.add('max-w-3xl');
+                    document.getElementById('login-view').classList.add('hidden');
+                    document.getElementById('admin-dashboard').classList.remove('hidden');
+                    document.getElementById('admin-filter-month').value = getIraqLocalDateString().slice(0, 7);
+                    updateAdminDashboard();
+                    switchAdminTab(savedAdminTab);
+                } else if (savedView === 'user') {
+                    setupUserDashboardSession();
+                }
+            }
+        });
+
+        async function handleLogin() {
+            const u = document.getElementById('login-user').value.trim();
+            const p = document.getElementById('login-pass').value.trim();
+
+            await fetchSheetData();
+
+            const foundUser = systemUsers.find(x => x.username === u && x.password === p);
+            const container = document.getElementById('app-container');
+
+            if ((u === 'admin' && p === 'admin123') || (foundUser && foundUser.role && foundUser.role.toLowerCase() === 'admin')) {
+                currentUser = foundUser ? foundUser.name : "Admin";
+                sessionStorage.setItem('runaki_logged_user', currentUser);
+                sessionStorage.setItem('runaki_current_view', 'admin');
+
+                container.classList.remove('max-w-md');
+                container.classList.add('max-w-3xl');
+                document.getElementById('login-view').classList.add('hidden');
+                document.getElementById('admin-dashboard').classList.remove('hidden');
+                
+                document.getElementById('admin-filter-month').value = getIraqLocalDateString().slice(0, 7);
+                updateAdminDashboard();
+                switchAdminTab('attendance');
+                return;
+            }
+
+            if (foundUser) {
+                currentUser = foundUser.name;
+                sessionStorage.setItem('runaki_logged_user', currentUser);
+                sessionStorage.setItem('runaki_current_view', 'user');
+
+                setupUserDashboardSession();
+            } else {
+                alert('Invalid username or password!');
+            }
+        }
+
+        function setupUserDashboardSession() {
+            const container = document.getElementById('app-container');
+            document.getElementById('user-display-name').innerText = currentUser;
+
+            container.classList.add('max-w-md');
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('user-dashboard').classList.remove('hidden');
+            
+            document.getElementById('user-calendar-month').value = getIraqLocalDateString().slice(0, 7);
+            
+            checkTodayAttendanceState();
+            refreshUserDashboardViews();
+            toggleLeaveFileField();
+        }
+
+        function logout() {
+            sessionStorage.removeItem('runaki_logged_user');
+            sessionStorage.removeItem('runaki_current_view');
+            sessionStorage.removeItem('runaki_admin_tab');
+
+            const container = document.getElementById('app-container');
+            container.classList.remove('max-w-3xl');
+            container.classList.add('max-w-md');
+            document.getElementById('login-view').classList.remove('hidden');
+            document.getElementById('user-dashboard').classList.add('hidden');
+            document.getElementById('admin-dashboard').classList.add('hidden');
+            document.getElementById('login-user').value = '';
+            document.getElementById('login-pass').value = '';
+            currentUser = "";
+        }
+
+        function onUserMonthChange() {
+            refreshUserDashboardViews();
+        }
+
+        function refreshUserDashboardViews() {
+            renderUserMonthlyCalendar();
+            renderUserMyLeaves();
+        }
+
+        function toggleLeaveFileField() {
+            const leaveType = document.getElementById('leave-type').value;
+            const fileContainer = document.getElementById('leave-file-container');
+            if (leaveType === 'Sick Leave') {
+                fileContainer.classList.remove('hidden');
+            } else {
+                fileContainer.classList.add('hidden');
+                document.getElementById('leave-file').value = '';
+            }
+        }
+
+        function toggleLeaveHistoryFilter() {
+            leaveFilterByMonth = !leaveFilterByMonth;
+            const label = document.getElementById('leave-filter-mode-label');
+            if (leaveFilterByMonth) {
+                label.innerText = "(Filtered by Month 🔄)";
+            } else {
+                label.innerText = "(Showing All History 🌐)";
+            }
+            renderUserMyLeaves();
+        }
+
+        function renderUserMyLeaves() {
+            const container = document.getElementById('user-my-leaves-list');
+            const selectedYM = document.getElementById('user-calendar-month').value; 
+            
+            if (leaveFilterByMonth) {
+                document.getElementById('user-leave-month-label').innerText = `(${selectedYM})`;
+            } else {
+                document.getElementById('user-leave-month-label').innerText = `(All)`;
+            }
+            
+            container.innerHTML = '';
+            
+            let myLeaves = leaveRequests.filter(x => x.name === currentUser);
+            if (leaveFilterByMonth) {
+                myLeaves = myLeaves.filter(x => x.dates && x.dates.includes(selectedYM));
+            }
+
+            if (myLeaves.length === 0) {
+                container.innerHTML = `<div class="text-slate-400 text-center py-2">No leave requests found</div>`;
+                return;
+            }
+
+            myLeaves.forEach(req => {
+                let badgeColor = "bg-amber-100 text-amber-700 border-amber-200";
+                if (req.status === 'Approved') badgeColor = "bg-emerald-100 text-emerald-700 border-emerald-200";
+                if (req.status === 'Rejected') badgeColor = "bg-rose-100 text-rose-700 border-rose-200";
+
+                container.innerHTML += `
+                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex justify-between items-center">
+                        <div>
+                            <p class="font-bold text-slate-700">${req.type || req.leaveType}</p>
+                            <p class="text-[10px] text-slate-400">${req.dates}</p>
+                            ${req.note ? `<p class="text-[10px] text-slate-600 mt-0.5">Note: ${req.note}</p>` : ''}
+                            ${req.fileName ? `<p class="text-[10px] text-indigo-600 font-mono mt-0.5">📎 ${req.fileName}</p>` : ''}
+                        </div>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeColor}">${req.status}</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderUserMonthlyCalendar() {
+            renderCalendarHelper(currentUser, 'user-calendar-month', 'user-calendar-grid');
+        }
+
+        function renderCalendarHelper(targetUser, monthInputId, gridId) {
+            const ym = document.getElementById(monthInputId).value;
+            if (!ym) return;
+
+            const [year, month] = ym.split('-').map(Number);
+            const daysInMonth = new Date(year, month, 0).getDate();
+            const grid = document.getElementById(gridId);
+            grid.innerHTML = '';
+
+            ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].forEach(d => {
+                grid.innerHTML += `<div class="font-bold text-[10px] text-slate-400">${d}</div>`;
+            });
+
+            const myRecords = attendanceRecords.filter(x => x.name === targetUser);
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayStr = String(day).padStart(2, '0');
+                const fullDate = `${ym}-${dayStr}`;
+
+                let bgClass = "bg-slate-100 text-slate-400";
+                let displayContent = `${day}`;
+                let titleAttr = "Normal Day";
+
+                const isHoliday = holidays.some(h => h.date === fullDate);
+                const rec = myRecords.find(r => formatDate(r.date) === fullDate);
+
+                if (isHoliday) {
+                    bgClass = "bg-slate-300 text-slate-700 font-bold";
+                    titleAttr = "Holiday / Rest Day";
+                } else if (rec) {
+                    let inTime = formatTime(rec.checkIn);
+                    let outTime = formatTime(rec.checkOut);
+
+                    if (rec.status === 'Present') {
+                        bgClass = "bg-emerald-500 text-white font-bold";
+                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[6px] block font-mono opacity-90">In:${inTime}</span><span class="text-[6px] block font-mono opacity-90">Out:${outTime}</span>`;
+                        titleAttr = `Present: In ${inTime} | Out ${outTime}`;
+                    } else if (rec.status === 'Late') {
+                        bgClass = "bg-amber-400 text-white font-bold";
+                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[6px] block font-mono opacity-90">In:${inTime}</span><span class="text-[6px] block font-mono opacity-90">Out:${outTime}</span>`;
+                        titleAttr = `Late: In ${inTime} | Out ${outTime}`;
+                    } else if (rec.status === 'Absent') {
+                        bgClass = "bg-rose-500 text-white font-bold";
+                        titleAttr = "Absent";
+                    } else if (rec.status === 'Leave') {
+                        bgClass = "bg-indigo-400 text-white font-bold";
+                        titleAttr = "On Leave";
+                    }
+                } else {
+                    const todayStr = getIraqLocalDateString();
+                    if (fullDate < todayStr) {
+                        bgClass = "bg-rose-500 text-white font-bold";
+                        titleAttr = "Absent / No Record";
+                    }
+                }
+
+                grid.innerHTML += `
+                    <div title="${titleAttr}" class="aspect-square rounded-xl flex flex-col items-center justify-center text-xs ${bgClass} shadow-xs cursor-pointer p-0.5">
+                        ${displayContent}
+                    </div>
+                `;
+            }
+        }
+
+        function checkTodayAttendanceState() {
+            const todayStr = getIraqLocalDateString();
+            const badge = document.getElementById('user-status-badge');
+            const btn = document.getElementById('user-action-btn');
+            const btnText = document.getElementById('user-btn-text');
+
+            if (!badge || !btn || !btnText) return;
+
+            const existingRec = attendanceRecords.find(x => x.name === currentUser && formatDate(x.date) === todayStr);
+
+            const hasActiveCheckIn = existingRec && (!existingRec.checkOut || existingRec.checkOut === '-' || existingRec.checkOut.includes('1899'));
+            const isCompleted = existingRec && existingRec.checkOut && existingRec.checkOut !== '-' && !existingRec.checkOut.includes('1899');
+
+            if (isCompleted) {
+                badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/20 text-slate-300 border border-slate-500/30";
+                badge.innerText = `Completed (${todayStr})`;
+                btn.disabled = true;
+                btn.className = "w-full py-3 bg-slate-700 text-slate-400 font-bold rounded-xl text-sm cursor-not-allowed";
+                btnText.innerText = "Already Completed";
+            } else if (hasActiveCheckIn) {
+                const formattedCheckInTime = formatTime(existingRec.checkIn);
+                badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+                badge.innerText = `On Duty - ${todayStr} (${formattedCheckInTime})`;
+                btn.disabled = false;
+                btn.className = "w-full py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl shadow-md text-sm cursor-pointer";
+                btnText.innerText = "Check-Out Now";
+            } else {
+                badge.className = "px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30";
+                badge.innerText = `Not Checked-In (${todayStr})`;
+                btn.disabled = false;
+                btn.className = "w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md text-sm cursor-pointer";
+                btnText.innerText = "Check-In Now";
+            }
+        }
+
+        async function handleUserCheckInOut() {
+            const todayStr = getIraqLocalDateString();
+            const note = document.getElementById('user-checkin-note').value.trim();
+            const currentTime = new Date().toISOString();
+
+            let existingRec = attendanceRecords.find(x => x.name === currentUser && formatDate(x.date) === todayStr);
+            const hasActiveCheckIn = existingRec && (!existingRec.checkOut || existingRec.checkOut === '-' || existingRec.checkOut.includes('1899'));
+            const isCompleted = existingRec && existingRec.checkOut && existingRec.checkOut !== '-' && !existingRec.checkOut.includes('1899');
+
+            if (isCompleted) {
+                alert("You have already checked-in and checked-out for today!");
+                return;
+            }
+
+            if (!existingRec) {
+                const newRec = {
+                    id: Date.now(),
+                    name: currentUser,
+                    date: todayStr,
+                    checkIn: currentTime,
+                    checkOut: "-",
+                    status: note ? "Late" : "Present",
+                    note: note
+                };
+                attendanceRecords.push(newRec);
+                await sendToSheet({ type: 'attendance', ...newRec });
+
+                checkTodayAttendanceState();
+                refreshUserDashboardViews();
+                alert("Successfully Checked-In and synced!");
+            } else if (hasActiveCheckIn) {
+                existingRec.checkOut = currentTime;
+                await sendToSheet({ type: 'attendance', ...existingRec });
+
+                checkTodayAttendanceState();
+                refreshUserDashboardViews();
+                alert("Successfully Checked-Out!");
+            }
+        }
+
+        async function submitLeaveRequest() {
+            const type = document.getElementById('leave-type').value;
+            const start = document.getElementById('leave-start').value;
+            const end = document.getElementById('leave-end').value;
+            const note = document.getElementById('leave-note').value.trim();
+            const fileInput = document.getElementById('leave-file');
+
+            if (!start || !end) {
+                alert("Please select start and end dates.");
+                return;
+            }
+
+            let fileName = '';
+            if (type === 'Sick Leave') {
+                if (fileInput.files.length === 0) {
+                    alert("A medical report is mandatory for Sick Leave!");
+                    return;
+                }
+                fileName = fileInput.files[0].name;
+            }
+
+            const newLeave = {
+                id: Date.now(),
+                name: currentUser,
+                leaveType: type,
+                dates: `${start} to ${end}`,
+                note: note,
+                fileName: fileName,
+                status: "Pending"
+            };
+
+            leaveRequests.push(newLeave);
+            await sendToSheet({ type: 'leave', ...newLeave });
+
+            document.getElementById('leave-note').value = '';
+            fileInput.value = '';
+
+            refreshUserDashboardViews(); 
+            alert("Leave application submitted successfully!");
+        }
+
+        let currentDrilldownUser = "";
+
+        function switchAdminTab(tab) {
+            sessionStorage.setItem('runaki_admin_tab', tab);
+            closeAdminDrilldown();
+            const att = document.getElementById('admin-tab-attendance');
+            const lea = document.getElementById('admin-tab-leaves');
+            const usr = document.getElementById('admin-tab-users');
+            const hol = document.getElementById('admin-tab-holidays');
+            
+            att.classList.add('hidden');
+            lea.classList.add('hidden');
+            usr.classList.add('hidden');
+            hol.classList.add('hidden');
+
+            document.getElementById('tab-btn-att').className = "flex-1 py-2 rounded-lg text-slate-600 transition-all";
+            document.getElementById('tab-btn-lea').className = "flex-1 py-2 rounded-lg text-slate-600 transition-all";
+            document.getElementById('tab-btn-usr').className = "flex-1 py-2 rounded-lg text-slate-600 transition-all";
+            document.getElementById('tab-btn-hol').className = "flex-1 py-2 rounded-lg text-slate-600 transition-all";
+
+            if (tab === 'attendance') {
+                att.classList.remove('hidden');
+                document.getElementById('tab-btn-att').className = "flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm transition-all";
+            } else if (tab === 'leaves') {
+                lea.classList.remove('hidden');
+                document.getElementById('tab-btn-lea').className = "flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm transition-all";
+                renderAdminLeaves();
+            } else if (tab === 'users') {
+                usr.classList.remove('hidden');
+                document.getElementById('tab-btn-usr').className = "flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm transition-all";
+                renderAdminUsersTable();
+            } else {
+                hol.classList.remove('hidden');
+                document.getElementById('tab-btn-hol').className = "flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm transition-all";
+                renderAdminHolidays();
+            }
+        }
+
+        function renderAdminUsersTable() {
+            const tbody = document.getElementById('admin-users-table');
+            tbody.innerHTML = '';
+            if (systemUsers.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No users found in Google Sheet 'Users' tab</td></tr>`;
+                return;
+            }
+            systemUsers.forEach(u => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-2.5 font-mono text-slate-600">${u.id || '-'}</td>
+                        <td class="p-2.5 font-semibold text-slate-800">${u.name || '-'}</td>
+                        <td class="p-2.5 text-slate-600">${u.username || '-'}</td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[10px] font-semibold">${u.role || 'User'}</span></td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openAdminDrilldown(name) {
+            currentDrilldownUser = name;
+            document.getElementById('drilldown-title').innerText = `${name}'s Monthly Report`;
+            document.getElementById('admin-tab-attendance').classList.add('hidden');
+            document.getElementById('admin-employee-drilldown').classList.remove('hidden');
+
+            document.getElementById('admin-drilldown-month').value = getIraqLocalDateString().slice(0, 7);
+            renderAdminDrilldownCalendar();
+        }
+
+        function closeAdminDrilldown() {
+            document.getElementById('admin-employee-drilldown').classList.add('hidden');
+            document.getElementById('admin-tab-attendance').classList.remove('hidden');
+        }
+
+        function renderAdminDrilldownCalendar() {
+            if (currentDrilldownUser) {
+                renderCalendarHelper(currentDrilldownUser, 'admin-drilldown-month', 'admin-drilldown-grid');
+            }
+        }
+
+        function updateAdminDashboard() {
+            document.getElementById('kpi-total').innerText = systemUsers.length > 0 ? systemUsers.length : (new Set(attendanceRecords.map(x => x.name)).size + 1);
+            document.getElementById('kpi-late').innerText = attendanceRecords.filter(x => x.status === 'Late').length;
+
+            const pendingCount = leaveRequests.filter(x => x.status === 'Pending').length;
+            const badge = document.getElementById('pending-badge');
+            if (pendingCount > 0) {
+                badge.innerText = pendingCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            renderAdminMasterTable();
+        }
+
+        function renderAdminMasterTable() {
+            const tbody = document.getElementById('admin-master-table');
+            const filterMonth = document.getElementById('admin-filter-month').value;
+            tbody.innerHTML = '';
+
+            let filteredRecords = attendanceRecords;
+            if (filterMonth) {
+                filteredRecords = attendanceRecords.filter(x => x.date && formatDate(x.date).startsWith(filterMonth));
+            }
+
+            if (filteredRecords.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-4 text-center text-slate-400">No records found for this month</td></tr>`;
+                return;
+            }
+
+            filteredRecords.forEach(row => {
+                let color = row.status === 'Present' ? 'bg-emerald-100 text-emerald-700' : (row.status === 'Late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700');
+                let cleanDateVal = formatDate(row.date);
+                let inTimeStr = formatTime(row.checkIn);
+                let outTimeStr = formatTime(row.checkOut);
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td class="p-2.5 font-semibold text-slate-800 flex items-center gap-2">
+                            <span onclick="openAdminDrilldown('${row.name}')" class="text-indigo-600 hover:underline cursor-pointer">${row.name}</span>
+                        </td>
+                        <td class="p-2.5 font-mono text-slate-600">${cleanDateVal}</td>
+                        <td class="p-2.5 text-slate-600">
+                            ${inTimeStr} / ${outTimeStr}
+                            ${row.note ? `<br><span class="text-[10px] text-amber-600 font-semibold">Note: ${row.note}</span>` : ''}
+                        </td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 ${color} rounded text-[10px] font-semibold">${row.status}</span></td>
+                        <td class="p-2.5 text-right flex justify-end gap-2 items-center">
+                            <button onclick="openEditModal('${row.id}')" class="text-indigo-600 hover:text-indigo-800 font-semibold" title="Edit">✏️</button>
+                            <button onclick="deleteRecord('${row.id}')" class="text-rose-500 hover:text-rose-700 font-semibold" title="Delete">🗑️</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openEditModal(id) {
+            const rec = attendanceRecords.find(x => x.id == id);
+            if (!rec) return;
+
+            document.getElementById('modal-title').innerText = "Edit Attendance";
+            document.getElementById('modal-record-id').value = rec.id;
+            document.getElementById('modal-name').value = rec.name;
+            document.getElementById('modal-date').value = formatDate(rec.date);
+            document.getElementById('modal-in').value = formatTime(rec.checkIn);
+            document.getElementById('modal-out').value = formatTime(rec.checkOut);
+            document.getElementById('modal-status').value = rec.status;
+            document.getElementById('manual-modal').classList.remove('hidden');
+        }
+
+        function closeManualModal() {
+            document.getElementById('manual-modal').classList.add('hidden');
+        }
+
+        function saveManualRecord() {
+            const id = document.getElementById('modal-record-id').value;
+            const date = document.getElementById('modal-date').value;
+            const checkIn = document.getElementById('modal-in').value;
+            const checkOut = document.getElementById('modal-out').value;
+            const status = document.getElementById('modal-status').value;
+
+            if (id) {
+                const rec = attendanceRecords.find(x => x.id == id);
+                if (rec) {
+                    rec.date = date;
+                    rec.checkIn = checkIn;
+                    rec.checkOut = checkOut;
+                    rec.status = status;
+                }
+            }
+
+            closeManualModal();
+            updateAdminDashboard();
+            alert("Record updated successfully!");
+        }
+
+        function deleteRecord(id) {
+            attendanceRecords = attendanceRecords.filter(x => x.id != id);
+            updateAdminDashboard();
+        }
+
+        function renderAdminLeaves() {
+            const container = document.getElementById('admin-leaves-list');
+            container.innerHTML = '';
+            
+            const pendingLeaves = leaveRequests.filter(x => x.status === 'Pending');
+            if (pendingLeaves.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-slate-400 bg-white rounded-2xl border text-xs">No pending leave requests</div>`;
+                return;
+            }
+
+            pendingLeaves.forEach(req => {
+                container.innerHTML += `
+                    <div class="bg-white p-3 rounded-2xl border border-slate-100 flex justify-between items-center text-xs shadow-sm">
+                        <div>
+                            <p class="font-bold text-slate-800">${req.name} <span class="font-normal text-slate-500">(${req.type || req.leaveType})</span></p>
+                            <p class="text-[10px] text-slate-400">Duration: ${req.dates}</p>
+                            ${req.note ? `<p class="text-[10px] text-slate-600 mt-0.5">Note: ${req.note}</p>` : ''}
+                            ${req.fileName ? `<p class="text-[10px] text-indigo-600 font-mono mt-0.5">📎 File: ${req.fileName}</p>` : ''}
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button onclick="handleLeaveAction(${req.id}, 'Approved')" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold">Approve</button>
+                            <button onclick="handleLeaveAction(${req.id}, 'Rejected')" class="bg-rose-100 text-rose-600 px-2.5 py-1 rounded-lg font-semibold">Reject</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function handleLeaveAction(id, action) {
+            const req = leaveRequests.find(x => x.id == id);
+            if (req) {
+                req.status = action;
+                if (action === 'Approved') {
+                    attendanceRecords.push({
+                        id: Date.now(),
+                        name: req.name,
+                        date: getIraqLocalDateString(),
+                        checkIn: "-",
+                        checkOut: "-",
+                        status: "Leave",
+                        note: `Approved ${req.type || req.leaveType}`
+                    });
+                }
+            }
+            updateAdminDashboard();
+            renderAdminLeaves();
+            alert(`Leave request ${action}!`);
+        }
+
+        function renderAdminHolidays() {
+            const container = document.getElementById('admin-holidays-list');
+            container.innerHTML = '';
+            if (holidays.length === 0) {
+                container.innerHTML = `<div class="text-slate-400 text-center p-3">No holidays set.</div>`;
+                return;
+            }
+            holidays.forEach((h, index) => {
+                container.innerHTML += `
+                    <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center shadow-xs">
+                        <div>
+                            <span class="font-bold font-mono text-slate-800">${h.date}</span> - <span class="text-slate-600">${h.name}</span>
+                        </div>
+                        <button onclick="removeHoliday(${index})" class="text-rose-500 font-semibold">Remove</button>
+                    </div>
+                `;
+            });
+        }
+
+        async function addHoliday() {
+            const dateVal = document.getElementById('new-holiday-date').value;
+            const name = document.getElementById('new-holiday-name').value.trim();
+            if (!dateVal || !name) {
+                alert("Please enter both date and title.");
+                return;
+            }
+            holidays.push({ date: dateVal, name });
+            await sendToSheet({ type: 'holiday', date: dateVal, name });
+            document.getElementById('new-holiday-name').value = '';
+            renderAdminHolidays();
+            alert("Holiday added successfully!");
+        }
+
+        function removeHoliday(index) {
+            holidays.splice(index, 1);
+            renderAdminHolidays();
+        }
+
+        function exportExcel() {
+            let csv = "data:text/csv;charset=utf-8,Name,Date,Check-In,Check-Out,Status,Note\n";
+            attendanceRecords.forEach(r => {
+                csv += `${r.name},${formatDate(r.date)},${formatTime(r.checkIn)},${formatTime(r.checkOut)},${r.status},${r.note || ''}\n`;
+            });
+            const link = document.createElement("a");
+            link.setAttribute("href", encodeURI(csv));
+            link.setAttribute("download", `Runaki_Attendance_Report.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+</body>
+</html>
