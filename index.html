@@ -288,7 +288,7 @@
 
     <!-- JavaScript Application Engine -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxqABeeZMBdZOimlIEGQGxCr14md83pf1flZxU7VTQQbt_GOfMruLiGzVVUfAZmwnBH/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwJBfEP46AmsZxj8vKMwA70XOfaMvFcDl_LyuNkkHsCfzJM0uSV3MSDeovkxFd_e51t/exec";
 
         let currentUser = "";
         let attendanceRecords = [];
@@ -411,13 +411,13 @@
                 
                 if (data.attendance && data.attendance.length > 1) {
                     let rawAtt = data.attendance.slice(1).map(row => ({
-                        id: row[0], name: row[1], date: row[2], checkIn: row[3], checkOut: row[4], status: row[5], note: row[6]
+                        id: String(row[0]), name: row[1], date: row[2], checkIn: row[3], checkOut: row[4], status: row[5], note: row[6]
                     }));
                     attendanceRecords = processAutoCheckouts(rawAtt);
                 }
                 if (data.leaves && data.leaves.length > 1) {
                     leaveRequests = data.leaves.slice(1).map(row => ({
-                        id: row[0], name: row[1], type: row[2], dates: row[3], note: row[4], fileName: row[5], status: row[6]
+                        id: String(row[0]), name: row[1], type: row[2], dates: row[3], note: row[4], fileName: row[5], status: row[6]
                     }));
                 }
                 if (data.holidays && data.holidays.length > 1) {
@@ -440,7 +440,7 @@
                 await fetch(SCRIPT_URL, {
                     method: 'POST',
                     mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                     body: JSON.stringify(payload)
                 });
             } catch (err) {
@@ -461,7 +461,7 @@
             const foundUser = systemUsers.find(x => x.username === u && x.password === p);
             const container = document.getElementById('app-container');
 
-            if ((u === 'admin' && p === 'admin123') || (foundUser && foundUser.role && foundUser.role.toLowerCase() === 'admin')) {
+            if ((foundUser && foundUser.role && foundUser.role.toLowerCase() === 'admin')) {
                 container.classList.remove('max-w-md');
                 container.classList.add('max-w-3xl');
                 document.getElementById('login-view').classList.add('hidden');
@@ -700,7 +700,6 @@
             const note = document.getElementById('user-checkin-note').value.trim();
             const currentTime = getIraqISOString();
 
-            // Check local memory first to prevent Google Sheet latency/race conditions
             let existingRec = attendanceRecords.find(x => {
                 if (!x.name || !x.date) return false;
                 return x.name.trim().toLowerCase() === currentUser.trim().toLowerCase() && formatDate(x.date) === todayStr;
@@ -717,7 +716,8 @@
 
             if (!existingRec || !hasCheckedIn) {
                 const newRec = {
-                    id: Date.now(),
+                    type: 'attendance',
+                    id: String(Date.now()),
                     name: currentUser,
                     date: todayStr,
                     checkIn: currentTime,
@@ -727,7 +727,7 @@
                 };
                 
                 attendanceRecords.push(newRec);
-                await sendToSheet({ type: 'attendance', ...newRec });
+                await sendToSheet({  ...newRec });
 
                 checkTodayAttendanceState();
                 refreshUserDashboardViews();
@@ -737,14 +737,9 @@
                 existingRec.checkOut = checkoutTime;
 
                 await sendToSheet({ 
-                    type: 'attendance', 
-                    id: existingRec.id,
-                    name: existingRec.name,
-                    date: existingRec.date,
-                    checkIn: existingRec.checkIn, 
-                    checkOut: checkoutTime,        
-                    status: existingRec.status,
-                    note: existingRec.note
+                    type: 'update_attendance', 
+                    id: String(existingRec.id),
+                    checkOut: checkoutTime
                 });
 
                 checkTodayAttendanceState();
@@ -775,7 +770,7 @@
             }
 
             const newLeave = {
-                id: Date.now(),
+                id: String(Date.now()),
                 name: currentUser,
                 leaveType: type,
                 dates: `${start} to ${end}`,
@@ -940,7 +935,7 @@
             document.getElementById('manual-modal').classList.add('hidden');
         }
 
-        function saveManualRecord() {
+        async function saveManualRecord() {
             const id = document.getElementById('modal-record-id').value;
             const date = document.getElementById('modal-date').value;
             const checkIn = document.getElementById('modal-in').value;
@@ -951,9 +946,18 @@
                 const rec = attendanceRecords.find(x => x.id == id);
                 if (rec) {
                     rec.date = date;
-                    rec.checkIn = checkIn;
-                    rec.checkOut = checkOut;
+                    if (checkIn && checkIn !== '-') rec.checkIn = checkIn;
+                    if (checkOut && checkOut !== '-') rec.checkOut = checkOut;
                     rec.status = status;
+
+                    await sendToSheet({
+                        type: 'admin_update_attendance',
+                        id: String(rec.id),
+                        date: rec.date,
+                        checkIn: rec.checkIn,
+                        checkOut: rec.checkOut,
+                        status: rec.status
+                    });
                 }
             }
 
@@ -962,8 +966,9 @@
             alert("Record updated successfully!");
         }
 
-        function deleteRecord(id) {
+        async function deleteRecord(id) {
             attendanceRecords = attendanceRecords.filter(x => x.id != id);
+            await sendToSheet({ type: 'deleteAttendance', id: String(id) });
             updateAdminDashboard();
         }
 
@@ -987,28 +992,32 @@
                             ${req.fileName ? `<p class="text-[10px] text-indigo-600 font-mono mt-0.5">📎 File: ${req.fileName}</p>` : ''}
                         </div>
                         <div class="flex gap-1.5">
-                            <button onclick="handleLeaveAction(${req.id}, 'Approved')" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold">Approve</button>
-                            <button onclick="handleLeaveAction(${req.id}, 'Rejected')" class="bg-rose-100 text-rose-600 px-2.5 py-1 rounded-lg font-semibold">Reject</button>
+                            <button onclick="handleLeaveAction('${req.id}', 'Approved')" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold">Approve</button>
+                            <button onclick="handleLeaveAction('${req.id}', 'Rejected')" class="bg-rose-100 text-rose-600 px-2.5 py-1 rounded-lg font-semibold">Reject</button>
                         </div>
                     </div>
                 `;
             });
         }
 
-        function handleLeaveAction(id, action) {
+        async function handleLeaveAction(id, action) {
             const req = leaveRequests.find(x => x.id == id);
             if (req) {
                 req.status = action;
+                await sendToSheet({ type: 'leaveStatus', id: String(req.id), status: action });
+
                 if (action === 'Approved') {
-                    attendanceRecords.push({
-                        id: Date.now(),
+                    const newAttRec = {
+                        id: String(Date.now()),
                         name: req.name,
                         date: getIraqLocalDateString(),
                         checkIn: "-",
                         checkOut: "-",
                         status: "Leave",
                         note: `Approved ${req.type || req.leaveType}`
-                    });
+                    };
+                    attendanceRecords.push(newAttRec);
+                    await sendToSheet({ type: 'attendance', ...newAttRec });
                 }
             }
             updateAdminDashboard();
