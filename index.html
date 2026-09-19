@@ -112,9 +112,8 @@
                     <div class="flex flex-wrap gap-2 text-[10px] text-slate-500">
                         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Present</span>
                         <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Absent</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Late</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-indigo-400"></span> Leave</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-900"></span> Holiday</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Late/Leave</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-300"></span> Holiday</span>
                     </div>
                     <div id="user-calendar-grid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
                 </div>
@@ -126,8 +125,8 @@
             <header class="bg-slate-900 text-white p-5 rounded-b-3xl shadow-md">
                 <div class="flex justify-between items-center">
                     <div>
-                        <h1 class="text-xs text-slate-400">Runaki Admin</h1>
-                        <h2 class="text-xl font-bold">Management</h2>
+                        <h1 class="text-xs text-slate-400">Runaki Admin Control Panel</h1>
+                        <h2 class="text-xl font-bold">Executive Suite & Management</h2>
                     </div>
                     <button onclick="logout()" class="bg-slate-800 hover:bg-slate-700 p-2 rounded-full text-xs transition-all">🚪 Logout</button>
                 </div>
@@ -263,11 +262,11 @@
                 <div class="grid grid-cols-2 gap-2">
                     <div>
                         <label class="block font-semibold text-slate-600 mb-1">Check-In</label>
-                        <input type="text" id="modal-in" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="09:17 PM">
+                        <input type="text" id="modal-in" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="08:00 AM">
                     </div>
                     <div>
                         <label class="block font-semibold text-slate-600 mb-1">Check-Out</label>
-                        <input type="text" id="modal-out" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="10:30 PM">
+                        <input type="text" id="modal-out" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="04:00 PM">
                     </div>
                 </div>
                 <div>
@@ -289,7 +288,7 @@
 
     <!-- JavaScript Application Engine -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxLhMnjxjEk1DuxvUXabrQC_2nLq1-0lD2gKDlD8eP5rxMr6vyyz7qDbteaaw6Roy4f/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwO4b3Zd1-rFP6rs7E9ubw0J9VUSyb0FWVdFawL6-uBwogOwNjRG5N5DG53wOZkypTC/exec";
 
         let currentUser = "";
         let attendanceRecords = [];
@@ -313,61 +312,69 @@
             }
         }
 
-        // ناردنی کات بە شێوازی HH:MM AM/PM لەسەر ناوچەی کاتی کوردستان (Asia/Baghdad)
         function getIraqISOString(date = new Date()) {
             try {
                 const options = { 
                     timeZone: 'Asia/Baghdad', 
-                    hour: 'numeric', 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit', 
+                    hour: '2-digit', 
                     minute: '2-digit', 
-                    hour12: true 
+                    second: '2-digit', 
+                    hour12: false 
                 };
-                return new Intl.DateTimeFormat('en-US', options).format(date);
+                const formatter = new Intl.DateTimeFormat('en-CA', options);
+                const parts = formatter.formatToParts(date);
+                const partMap = {};
+                parts.forEach(p => partMap[p.type] = p.value);
+                
+                return `${partMap.year}-${partMap.month}-${partMap.day}T${partMap.hour}:${partMap.minute}:${partMap.second}.000+03:00`;
             } catch (e) {
-                return "12:00 AM";
+                return new Date().toISOString();
             }
         }
 
         function getCheckoutISOString(checkInDateStr, date = new Date()) {
             try {
-                const options = { 
+                const optionsTime = { 
                     timeZone: 'Asia/Baghdad', 
-                    hour: 'numeric', 
+                    hour: '2-digit', 
                     minute: '2-digit', 
-                    hour12: true 
+                    second: '2-digit', 
+                    hour12: false 
                 };
-                return new Intl.DateTimeFormat('en-US', options).format(date);
+                const formatterTime = new Intl.DateTimeFormat('en-CA', optionsTime);
+                const partsTime = formatterTime.formatToParts(date);
+                const partMapTime = {};
+                partsTime.forEach(p => partMapTime[p.type] = p.value);
+                
+                let baseDate = getIraqLocalDateString();
+                if (checkInDateStr) {
+                    baseDate = checkInDateStr.split('T')[0];
+                }
+                
+                return `${baseDate}T${partMapTime.hour}:${partMapTime.minute}:${partMapTime.second}.000+03:00`;
             } catch (e) {
-                return "12:00 PM";
+                return new Date().toISOString();
             }
         }
 
-        // فۆرماتکردنی کات بۆ 12 کاتژمێری لەگەڵ AM/PM لەسەر ناوچەی کاتی کوردستان (Asia/Baghdad)
         function formatTime(timeString) {
-            if (!timeString || timeString.includes('1899') || timeString === '-') return '-';
+            if (!timeString) return '-';
+            timeString = String(timeString);
+            if (timeString.includes('1899') || timeString === '-') return '-';
             try {
-                let dateObj;
-                if (timeString.includes('T')) {
-                    dateObj = new Date(timeString);
-                } else if (timeString.includes('AM') || timeString.includes('PM')) {
+                const dateObj = new Date(timeString);
+                if (isNaN(dateObj.getTime())) {
                     return timeString;
-                } else if (timeString.length >= 5 && timeString.includes(':')) {
-                    const todayStr = getIraqLocalDateString();
-                    dateObj = new Date(`${todayStr}T${timeString}:00.000+03:00`);
-                } else {
-                    dateObj = new Date(timeString);
                 }
-
-                if (!isNaN(dateObj.getTime())) {
-                    const options = { 
-                        timeZone: 'Asia/Baghdad', 
-                        hour: 'numeric', 
-                        minute: '2-digit', 
-                        hour12: true 
-                    };
-                    return new Intl.DateTimeFormat('en-US', options).format(dateObj);
-                }
-                return timeString;
+                return dateObj.toLocaleTimeString('en-US', { 
+                    timeZone: 'Asia/Baghdad',
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    hour12: true 
+                });
             } catch (error) {
                 return timeString;
             }
@@ -389,7 +396,7 @@
                 if (recordDate < today && hasCheckedIn && hasNotCheckedOut) {
                     return {
                         ...record,
-                        checkOut: `11:59 PM`,
+                        checkOut: `${recordDate}T23:59:59.000+03:00`,
                         note: record.note 
                             ? `${record.note} (Auto-closed at midnight)` 
                             : 'Auto-closed at midnight'
@@ -399,6 +406,7 @@
             });
         }
 
+        // هێنانی داتا لە ڕێگەی doGet (Google Apps Script) لە کاتی باربوونی پەڕەکە یان لۆگیندا
         async function fetchSheetData() {
             try {
                 const response = await fetch(SCRIPT_URL);
@@ -443,6 +451,7 @@
             }
         }
 
+        // لە کاتی کردنەوەی پەڕەکە (Page Load / Refresh) ڕاستەوخۆ داتاکان لە شیتەوە دەهێنرێن
         window.addEventListener('DOMContentLoaded', async () => {
             await fetchSheetData();
         });
@@ -451,12 +460,13 @@
             const u = document.getElementById('login-user').value.trim();
             const p = document.getElementById('login-pass').value.trim();
 
+            // نوێترین داتا لە شیتەوە دەهێنرێت پێش پشکنینی لۆگین
             await fetchSheetData();
 
             const foundUser = systemUsers.find(x => x.username === u && x.password === p);
             const container = document.getElementById('app-container');
 
-            if ((foundUser && foundUser.role && foundUser.role.toLowerCase() === 'admin')) {
+            if ((u === 'admin' && p === 'admin123') || (foundUser && foundUser.role && foundUser.role.toLowerCase() === 'admin')) {
                 container.classList.remove('max-w-md');
                 container.classList.add('max-w-3xl');
                 document.getElementById('login-view').classList.add('hidden');
@@ -575,82 +585,7 @@
         }
 
         function renderUserMonthlyCalendar() {
-            renderCalendarHelperForUser(currentUser, 'user-calendar-month', 'user-calendar-grid');
-        }
-
-        function renderCalendarHelperForUser(targetUser, monthInputId, gridId) {
-            const ym = document.getElementById(monthInputId).value;
-            if (!ym) return;
-
-            const [year, month] = ym.split('-').map(Number);
-            const daysInMonth = new Date(year, month, 0).getDate();
-            const grid = document.getElementById(gridId);
-            grid.innerHTML = '';
-
-            ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].forEach(d => {
-                grid.innerHTML += `<div class="font-bold text-[10px] text-slate-400">${d}</div>`;
-            });
-
-            const cleanTarget = targetUser ? targetUser.trim().toLowerCase() : "";
-            const myRecords = attendanceRecords.filter(x => {
-                if (!x.name) return false;
-                return x.name.toString().trim().toLowerCase() === cleanTarget;
-            });
-
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayStr = String(day).padStart(2, '0');
-                const fullDate = `${ym}-${dayStr}`;
-
-                let bgClass = "bg-slate-100 text-slate-400";
-                let displayContent = `${day}`;
-                let titleAttr = "Normal Day";
-
-                const isHoliday = holidays.some(h => h.date === fullDate);
-                
-                const rec = myRecords.find(r => {
-                    const recDateFormatted = formatDate(r.date);
-                    return recDateFormatted === fullDate;
-                });
-
-                if (isHoliday) {
-                    bgClass = "bg-slate-900 text-white font-bold shadow-sm";
-                    titleAttr = "Holiday / Rest Day";
-                } else if (rec) {
-                    let inTime = formatTime(rec.checkIn);
-                    let outTime = formatTime(rec.checkOut);
-
-                    const hasCheckedIn = rec.checkIn && rec.checkIn !== '-' && !rec.checkIn.includes('1899');
-                    const hasCheckedOut = rec.checkOut && rec.checkOut !== '-' && !rec.checkOut.includes('1899');
-
-                    if (rec.status === 'Leave') {
-                        bgClass = "bg-indigo-400 text-white font-bold";
-                        titleAttr = "On Leave";
-                    } else if (hasCheckedIn && hasCheckedOut) {
-                        bgClass = "bg-emerald-500 text-white font-bold";
-                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[6px] block font-mono opacity-90">In:${inTime}</span><span class="text-[6px] block font-mono opacity-90">Out:${outTime}</span>`;
-                        titleAttr = `Completed: In ${inTime} | Out ${outTime}`;
-                    } else if (hasCheckedIn && !hasCheckedOut) {
-                        bgClass = "bg-amber-400 text-slate-900 font-bold";
-                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[7px] block font-mono font-semibold">In:${inTime}</span>`;
-                        titleAttr = `On Duty / Not Checked-Out: In ${inTime}`;
-                    } else if (rec.status === 'Absent') {
-                        bgClass = "bg-rose-500 text-white font-bold";
-                        titleAttr = "Absent";
-                    }
-                } else {
-                    const todayStr = getIraqLocalDateString();
-                    if (fullDate < todayStr) {
-                        bgClass = "bg-rose-500 text-white font-bold";
-                        titleAttr = "Absent / No Record";
-                    }
-                }
-
-                grid.innerHTML += `
-                    <div title="${titleAttr}" class="aspect-square rounded-xl flex flex-col items-center justify-center text-xs ${bgClass} shadow-xs cursor-pointer p-0.5">
-                        ${displayContent}
-                    </div>
-                `;
-            }
+            renderCalendarHelper(currentUser, 'user-calendar-month', 'user-calendar-grid');
         }
 
         function renderAdminDrilldownCalendar() {
@@ -680,7 +615,7 @@
                 let displayContent = `${day}`;
                 let titleAttr = "Normal Day";
 
-                const isHoliday = holidays.some(h => h.date === fullDate);
+                const isHoliday = holidays.some(h => formatDate(h.date) === fullDate);
                 const rec = myRecords.find(r => formatDate(r.date) === fullDate);
 
                 if (isHoliday) {
@@ -693,20 +628,20 @@
                     const hasCheckedIn = rec.checkIn && rec.checkIn !== '-' && !rec.checkIn.includes('1899');
                     const hasCheckedOut = rec.checkOut && rec.checkOut !== '-' && !rec.checkOut.includes('1899');
 
-                    if (rec.status === 'Leave') {
-                        bgClass = "bg-indigo-400 text-white font-bold";
-                        titleAttr = "On Leave";
-                    } else if (hasCheckedIn && hasCheckedOut) {
+                    if (hasCheckedIn && hasCheckedOut) {
                         bgClass = "bg-emerald-500 text-white font-bold";
-                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[6px] block font-mono opacity-90">In:${inTime}</span><span class="text-[6px] block font-mono opacity-90">Out:${outTime}</span>`;
+                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[7px] block font-mono opacity-90">In:${inTime}</span><span class="text-[7px] block font-mono opacity-90">Out:${outTime}</span>`;
                         titleAttr = `Completed: In ${inTime} | Out ${outTime}`;
                     } else if (hasCheckedIn && !hasCheckedOut) {
                         bgClass = "bg-amber-400 text-slate-900 font-bold";
-                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[7px] block font-mono font-semibold">In:${inTime}</span>`;
+                        displayContent = `<span class="text-[9px] block leading-none font-bold">${day}</span><span class="text-[8px] block font-mono font-semibold">In:${inTime}</span>`;
                         titleAttr = `On Duty / Not Checked-Out: In ${inTime}`;
                     } else if (rec.status === 'Absent') {
                         bgClass = "bg-rose-500 text-white font-bold";
                         titleAttr = "Absent";
+                    } else if (rec.status === 'Leave') {
+                        bgClass = "bg-indigo-400 text-white font-bold";
+                        titleAttr = "On Leave";
                     }
                 } else {
                     const todayStr = getIraqLocalDateString();
@@ -786,7 +721,6 @@
 
             if (!existingRec || !hasCheckedIn) {
                 const newRec = {
-                    type: 'attendance',
                     id: String(Date.now()),
                     name: currentUser,
                     date: todayStr,
@@ -797,7 +731,7 @@
                 };
                 
                 attendanceRecords.push(newRec);
-                await sendToSheet({  ...newRec });
+                await sendToSheet({ type: 'attendance', ...newRec });
 
                 checkTodayAttendanceState();
                 refreshUserDashboardViews();
@@ -807,9 +741,14 @@
                 existingRec.checkOut = checkoutTime;
 
                 await sendToSheet({ 
-                    type: 'update_attendance', 
+                    type: 'attendance', 
                     id: String(existingRec.id),
-                    checkOut: checkoutTime
+                    name: existingRec.name,
+                    date: existingRec.date,
+                    checkIn: existingRec.checkIn, 
+                    checkOut: checkoutTime,        
+                    status: existingRec.status,
+                    note: existingRec.note
                 });
 
                 checkTodayAttendanceState();
@@ -962,7 +901,7 @@
             }
 
             filteredRecords.forEach(row => {
-                let color = row.status === 'Present' ? 'bg-emerald-100 text-emerald-700' : (row.status === 'Late' ? 'bg-amber-100 text-amber-700' : (row.status === 'Leave' ? 'bg-indigo-100 text-indigo-700' : 'bg-rose-100 text-rose-700'));
+                let color = row.status === 'Present' ? 'bg-emerald-100 text-emerald-700' : (row.status === 'Late' ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-700');
                 let cleanDateVal = formatDate(row.date);
                 let inTimeStr = formatTime(row.checkIn);
                 let outTimeStr = formatTime(row.checkOut);
@@ -1016,17 +955,19 @@
                 const rec = attendanceRecords.find(x => x.id == id);
                 if (rec) {
                     rec.date = date;
-                    if (checkIn && checkIn !== '-') rec.checkIn = checkIn;
-                    if (checkOut && checkOut !== '-') rec.checkOut = checkOut;
+                    rec.checkIn = checkIn;
+                    rec.checkOut = checkOut;
                     rec.status = status;
 
                     await sendToSheet({
-                        type: 'admin_update_attendance',
+                        type: 'attendance',
                         id: String(rec.id),
+                        name: rec.name,
                         date: rec.date,
-                        checkIn: rec.checkIn,
-                        checkOut: rec.checkOut,
-                        status: rec.status
+                        checkIn: checkIn,
+                        checkOut: checkOut,
+                        status: status,
+                        note: rec.note
                     });
                 }
             }
@@ -1046,38 +987,14 @@
             const container = document.getElementById('admin-leaves-list');
             container.innerHTML = '';
             
-            container.innerHTML = `
-                <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 flex justify-between items-center mb-3">
-                    <span class="font-bold text-slate-700 text-xs">Filter Leave Requests by Month:</span>
-                    <input type="month" id="admin-leave-month-filter" onchange="renderAdminLeaves()" class="text-xs border border-slate-200 rounded-xl p-1.5 bg-white font-mono">
-                </div>
-                <div id="admin-leaves-items-container" class="space-y-2"></div>
-            `;
-
-            const monthInput = document.getElementById('admin-leave-month-filter');
-            if (!monthInput.value) {
-                monthInput.value = getIraqLocalDateString().slice(0, 7);
-            }
-            const selectedYM = monthInput.value;
-
-            const itemsContainer = document.getElementById('admin-leaves-items-container');
-
-            const filteredLeaves = leaveRequests.filter(req => {
-                if (!req.dates) return false;
-                return req.dates.includes(selectedYM);
-            });
-
-            if (filteredLeaves.length === 0) {
-                itemsContainer.innerHTML = `<div class="p-4 text-center text-slate-400 bg-white rounded-2xl border text-xs">No leave requests found for ${selectedYM}</div>`;
+            const pendingLeaves = leaveRequests.filter(x => x.status === 'Pending');
+            if (pendingLeaves.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-slate-400 bg-white rounded-2xl border text-xs">No pending leave requests</div>`;
                 return;
             }
 
-            filteredLeaves.forEach(req => {
-                let badgeColor = "bg-amber-100 text-amber-700 border-amber-200";
-                if (req.status === 'Approved') badgeColor = "bg-emerald-100 text-emerald-700 border-emerald-200";
-                if (req.status === 'Rejected') badgeColor = "bg-rose-100 text-rose-700 border-rose-200";
-
-                itemsContainer.innerHTML += `
+            pendingLeaves.forEach(req => {
+                container.innerHTML += `
                     <div class="bg-white p-3 rounded-2xl border border-slate-100 flex justify-between items-center text-xs shadow-sm">
                         <div>
                             <p class="font-bold text-slate-800">${req.name} <span class="font-normal text-slate-500">(${req.type || req.leaveType})</span></p>
@@ -1085,14 +1002,9 @@
                             ${req.note ? `<p class="text-[10px] text-slate-600 mt-0.5">Note: ${req.note}</p>` : ''}
                             ${req.fileName ? `<p class="text-[10px] text-indigo-600 font-mono mt-0.5">📎 File: ${req.fileName}</p>` : ''}
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeColor}">${req.status}</span>
-                            ${req.status === 'Pending' ? `
-                                <div class="flex gap-1.5">
-                                    <button onclick="handleLeaveAction('${req.id}', 'Approved')" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold">Approve</button>
-                                    <button onclick="handleLeaveAction('${req.id}', 'Rejected')" class="bg-rose-100 text-rose-600 px-2.5 py-1 rounded-lg font-semibold">Reject</button>
-                                </div>
-                            ` : ''}
+                        <div class="flex gap-1.5">
+                            <button onclick="handleLeaveAction('${req.id}', 'Approved')" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold">Approve</button>
+                            <button onclick="handleLeaveAction('${req.id}', 'Rejected')" class="bg-rose-100 text-rose-600 px-2.5 py-1 rounded-lg font-semibold">Reject</button>
                         </div>
                     </div>
                 `;
@@ -1106,36 +1018,17 @@
                 await sendToSheet({ type: 'leaveStatus', id: String(req.id), status: action });
 
                 if (action === 'Approved') {
-                    let startStr = "";
-                    let endStr = "";
-                    if (req.dates && req.dates.includes(' to ')) {
-                        const parts = req.dates.split(' to ');
-                        startStr = parts[0].trim();
-                        endStr = parts[1].trim();
-                    } else {
-                        startStr = getIraqLocalDateString();
-                        endStr = getIraqLocalDateString();
-                    }
-
-                    let curr = new Date(startStr);
-                    const last = new Date(endStr);
-
-                    while (curr <= last) {
-                        const dateFormatted = getIraqLocalDateString(curr);
-                        const newAttRec = {
-                            id: String(Date.now() + Math.random()),
-                            name: req.name,
-                            date: dateFormatted,
-                            checkIn: "-",
-                            checkOut: "-",
-                            status: "Leave",
-                            note: `Approved ${req.type || req.leaveType}`
-                        };
-                        attendanceRecords.push(newAttRec);
-                        await sendToSheet({ type: 'attendance', ...newAttRec });
-                        
-                        curr.setDate(curr.getDate() + 1);
-                    }
+                    const newAttRec = {
+                        id: String(Date.now()),
+                        name: req.name,
+                        date: getIraqLocalDateString(),
+                        checkIn: "-",
+                        checkOut: "-",
+                        status: "Leave",
+                        note: `Approved ${req.type || req.leaveType}`
+                    };
+                    attendanceRecords.push(newAttRec);
+                    await sendToSheet({ type: 'attendance', ...newAttRec });
                 }
             }
             updateAdminDashboard();
@@ -1156,7 +1049,7 @@
                         <div>
                             <span class="font-bold font-mono text-slate-800">${h.date}</span> - <span class="text-slate-600">${h.name}</span>
                         </div>
-                        <button onclick="removeHoliday(${index})" class="text-rose-500 font-semibold cursor-pointer">Remove</button>
+                        <button onclick="removeHoliday(${index})" class="text-rose-500 font-semibold">Remove</button>
                     </div>
                 `;
             });
@@ -1169,38 +1062,20 @@
                 alert("Please enter both date and title.");
                 return;
             }
-            
             holidays.push({ date: dateVal, name });
             await sendToSheet({ type: 'holiday', date: dateVal, name });
-            
             document.getElementById('new-holiday-name').value = '';
-            document.getElementById('new-holiday-date').value = '';
-            
             renderAdminHolidays();
-            await fetchSheetData();
-            
-            alert("Holiday added successfully and applied to all calendars!");
+            alert("Holiday added successfully!");
         }
 
         async function removeHoliday(index) {
-            const targetHoliday = holidays[index];
-            if (!targetHoliday) return;
-
-            if (!confirm(`Are you sure you want to remove the holiday: ${targetHoliday.name}?`)) {
-                return;
-            }
-
+            const h = holidays[index];
             holidays.splice(index, 1);
             renderAdminHolidays();
-
-            await sendToSheet({
-                type: 'deleteHoliday',
-                date: targetHoliday.date,
-                name: targetHoliday.name
-            });
-
-            await fetchSheetData();
-            renderAdminHolidays();
+            if (h) {
+                await sendToSheet({ type: 'deleteHoliday', date: h.date, name: h.name });
+            }
         }
 
         function exportExcel() {
