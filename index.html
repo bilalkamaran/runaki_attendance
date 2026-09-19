@@ -15,8 +15,7 @@
 
     <!-- Container -->
     <div id="app-container" class="w-full max-w-md bg-white min-h-screen sm:min-h-[850px] sm:rounded-3xl shadow-2xl flex flex-col justify-between overflow-hidden relative border border-slate-200 transition-all duration-300">
-        
-        <!-- Session restore placeholder (shown while a saved session is being restored after refresh) -->
+
         <div id="session-loading" class="hidden flex-1 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
 
         <!-- ================= 1. LOGIN VIEW ================= -->
@@ -67,9 +66,8 @@
                                 Not Checked-In
                             </div>
                         </div>
-                        <!-- Reason box: only visible when the user is checking in AFTER 8:00 AM -->
                         <div id="user-note-wrapper" class="hidden space-y-1">
-                            <p class="text-[10px] text-amber-300 font-semibold">⏰ You are late (after 8:00 AM) — please write the reason:</p>
+                            <p class="text-[10px] text-amber-300 font-semibold">⏰ You are late (after 08:00) — please write the reason:</p>
                             <input type="text" id="user-checkin-note" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl p-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400" placeholder="Reason for being late (required)...">
                         </div>
                         <button id="user-action-btn" onclick="handleUserCheckInOut()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md text-sm">
@@ -94,7 +92,6 @@
 
                 <!-- ===== PAGE 2: LEAVES (request + my history) ===== -->
                 <div id="user-page-leave" class="hidden space-y-5">
-                    <!-- Request Leave Section -->
                     <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
                         <h4 class="font-bold text-slate-700 text-xs">🏖️ Request Leave / Vacation</h4>
                         <div class="space-y-2 text-xs">
@@ -112,13 +109,13 @@
                             </div>
                             <div id="leave-file-container">
                                 <label class="block text-[10px] font-semibold text-rose-500 mb-1">Attach Medical Report <span class="font-bold">* (Mandatory for Sick Leave)</span></label>
-                                <input type="file" id="leave-file" accept="application/pdf,image/*" class="w-full border border-slate-200 rounded-xl p-1.5 bg-slate-50 text-[10px] file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                                <input type="file" id="leave-file" accept="application/pdf,image/*" onchange="previewSelectedLeaveFile()" class="w-full border border-slate-200 rounded-xl p-1.5 bg-slate-50 text-[10px] file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                                <img id="leave-file-preview" class="hidden mt-2 max-h-40 rounded-lg border border-slate-200 object-contain" alt="preview">
                             </div>
                             <button id="leave-submit-btn" onclick="submitLeaveRequest()" class="w-full bg-slate-800 text-white py-2 rounded-xl font-semibold hover:bg-slate-700 transition-all">Submit Leave Request</button>
                         </div>
                     </div>
 
-                    <!-- My Leave Requests History -->
                     <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
                         <div class="flex justify-between items-center gap-2">
                             <h4 onclick="toggleLeaveHistoryFilter()" id="user-leave-history-title" class="font-bold text-slate-700 text-xs cursor-pointer hover:text-indigo-600 transition-colors flex items-center gap-1 select-none" title="Click to toggle filter between All Time and Selected Month">
@@ -131,7 +128,6 @@
                 </div>
             </main>
 
-            <!-- Bottom navigation -->
             <nav class="grid grid-cols-2 border-t border-slate-200 bg-white text-xs font-semibold">
                 <button id="user-nav-home" onclick="switchUserPage('home')" class="py-3.5 text-indigo-600 border-t-2 border-indigo-600 -mt-px bg-indigo-50/50">🏠 Home</button>
                 <button id="user-nav-leave" onclick="switchUserPage('leave')" class="py-3.5 text-slate-400 hover:text-slate-600 border-t-2 border-transparent -mt-px">🏖️ Leaves</button>
@@ -152,13 +148,11 @@
 
             <main class="p-5 flex-1 overflow-y-auto space-y-4">
 
-                <!-- Shown only when the deployed Apps Script is outdated -->
                 <div id="version-warning" class="hidden bg-rose-50 border border-rose-300 text-rose-700 rounded-2xl p-3 text-xs space-y-1">
                     <p class="font-bold">⚠️ Google Apps Script is outdated</p>
-                    <p>Locations and leave files will NOT be saved to the sheet until you update it: paste the new <span class="font-mono">goht.txt</span> code, then <b>Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy</b> (and run <span class="font-mono">authorizeDrive</span> once).</p>
+                    <p>Times, locations and leave images will NOT work correctly until you update it: paste the new <span class="font-mono">goht.txt</span> code, then <b>Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy</b> (and run <span class="font-mono">authorizeDrive</span> once).</p>
                 </div>
-                
-                <!-- KPI Stat Cards -->
+
                 <div class="grid grid-cols-3 gap-2">
                     <div class="bg-slate-50 p-3 rounded-2xl border border-slate-200 text-center">
                         <p class="text-[10px] text-slate-400 font-semibold uppercase">Total Staff</p>
@@ -174,7 +168,6 @@
                     </div>
                 </div>
 
-                <!-- Admin Action Tabs -->
                 <div class="flex bg-slate-200 p-1 rounded-xl text-xs font-semibold">
                     <button onclick="switchAdminTab('attendance')" id="tab-btn-att" class="flex-1 py-2 rounded-lg bg-white text-slate-800 shadow-sm transition-all">📋 Attendance</button>
                     <button onclick="switchAdminTab('leaves')" id="tab-btn-lea" class="flex-1 py-2 rounded-lg text-slate-600 transition-all">🏖️ Leaves <span id="pending-badge" class="px-1.5 py-0.2 bg-rose-500 text-white rounded-full text-[9px] hidden">0</span></button>
@@ -198,7 +191,7 @@
                     <div id="admin-drilldown-grid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
                 </div>
 
-                <!-- TAB 1: ATTENDANCE & MONTHLY FILTER -->
+                <!-- TAB 1: ATTENDANCE -->
                 <div id="admin-tab-attendance" class="space-y-3">
                     <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-2">
                         <div>
@@ -232,7 +225,7 @@
                     <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
                         <div class="flex justify-between items-center">
                             <h4 class="font-bold text-slate-700 text-xs">All Leave Requests (all employees)</h4>
-                            <span id="admin-leave-count" class="text-[10px] text-slate-400 font-mono"></span>
+                            <div class="flex items-center gap-2"><span id="admin-leave-count" class="text-[10px] text-slate-400 font-mono"></span><button onclick="refreshAdminData(true)" class="bg-white border border-slate-200 px-2 py-1 rounded-lg text-[10px] font-semibold text-slate-600 hover:bg-slate-100">🔄 Refresh</button></div>
                         </div>
                         <div class="grid grid-cols-2 gap-2">
                             <select id="admin-leave-status-filter" onchange="renderAdminLeaves()" class="text-xs border border-slate-200 rounded-xl p-1.5 bg-white">
@@ -301,12 +294,12 @@
                 </div>
                 <div class="grid grid-cols-2 gap-2">
                     <div>
-                        <label class="block font-semibold text-slate-600 mb-1">Check-In</label>
-                        <input type="text" id="modal-in" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="08:00 AM">
+                        <label class="block font-semibold text-slate-600 mb-1">Check-In (HH:MM)</label>
+                        <input type="text" id="modal-in" maxlength="5" inputmode="numeric" class="w-full border border-slate-200 rounded-xl p-2.5 font-mono" placeholder="08:00">
                     </div>
                     <div>
-                        <label class="block font-semibold text-slate-600 mb-1">Check-Out</label>
-                        <input type="text" id="modal-out" class="w-full border border-slate-200 rounded-xl p-2.5" placeholder="04:00 PM">
+                        <label class="block font-semibold text-slate-600 mb-1">Check-Out (HH:MM)</label>
+                        <input type="text" id="modal-out" maxlength="5" inputmode="numeric" class="w-full border border-slate-200 rounded-xl p-2.5 font-mono" placeholder="16:00">
                     </div>
                 </div>
                 <div>
@@ -328,7 +321,7 @@
 
     <!-- JavaScript Application Engine -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyReoQbQH0HGKSEdhkifCN4gjlO4ekIEZwB1KzBuOCCLllEEjPbzK0M71iUaHBYS0-J/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzk7VeHKSpEqFh11H-H7gc7Db1FDnSNHR3rG1-T_NvOtIKGPfTlAHGw4mDE1kXpL7ym/exec";
 
         let currentUser = "";
         let attendanceRecords = [];
@@ -339,24 +332,19 @@
         let leaveFilterByMonth = true;
 
         // ---------------- Settings ----------------
-        // true  = check-in is BLOCKED if the location can't be captured
-        // false = check-in still works, location is saved as "Unavailable"
         const REQUIRE_LOCATION = true;
-        // max size of the uploaded leave file (PDF / image)
         const MAX_UPLOAD_MB = 5;
-        // must match SCRIPT_VERSION inside the Apps Script (goht.txt). If it doesn't, the
-        // admin sees a red warning = the Apps Script was NOT redeployed as a "New version".
-        const REQUIRED_SCRIPT_VERSION = "v4-checkinout-sheet";
+        // must match SCRIPT_VERSION inside the Apps Script (goht.txt)
+        const REQUIRED_SCRIPT_VERSION = "v8-image-reject-reason";
         let scriptVersion = "";
 
-        // ---------------- Session persistence (survives page refresh) ----------------
+        // ---------------- Session persistence ----------------
         const SESSION_KEY = 'runaki_session';
         function saveSession(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (e) {} }
         function loadSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; } }
         function clearSession() { try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
         function updateSession(patch) { const s = loadSession(); if (s) saveSession({ ...s, ...patch }); }
 
-        // If a saved session exists, don't flash the login form while data is loading
         if (loadSession()) {
             document.getElementById('login-view').classList.add('hidden');
             document.getElementById('session-loading').classList.remove('hidden');
@@ -366,7 +354,6 @@
             return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
         }
 
-        // only allow real https links (for file / location links coming from the sheet)
         function safeUrl(u) {
             u = String(u == null ? '' : u).trim();
             return /^https:\/\//i.test(u) ? u : '';
@@ -381,7 +368,63 @@
             });
         }
 
-        // Capture the device GPS position -> { lat, lng }
+        // Images are resized (max 1600px) and saved as JPEG before upload:
+        // smaller = faster upload + it fits inside the Google Sheet cell without problems.
+        async function prepareUploadFile(file) {
+            if (!file.type.startsWith('image/') || file.type === 'image/gif') {
+                return { name: file.name, mime: file.type, data: await readFileAsBase64(file) };
+            }
+            try {
+                const bmp = await createImageBitmap(file);
+                const MAX = 1600;
+                const scale = Math.min(1, MAX / Math.max(bmp.width, bmp.height));
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(bmp.width * scale);
+                canvas.height = Math.round(bmp.height * scale);
+                const ctx = canvas.getContext('2d');
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+                return {
+                    name: file.name.replace(/\.[^.]+$/, '') + '.jpg',
+                    mime: 'image/jpeg',
+                    data: dataUrl.split(',')[1] || '',
+                    thumb: makeThumb(canvas)
+                };
+            } catch (e) {
+                return { name: file.name, mime: file.type, data: await readFileAsBase64(file) };
+            }
+        }
+
+        // small preview (must stay < 45,000 characters: a Google Sheet cell holds max 50,000)
+        function makeThumb(srcCanvas) {
+            let out = '';
+            for (const w of [360, 300, 240, 180, 140]) {
+                const scale = Math.min(1, w / srcCanvas.width);
+                const c = document.createElement('canvas');
+                c.width = Math.max(1, Math.round(srcCanvas.width * scale));
+                c.height = Math.max(1, Math.round(srcCanvas.height * scale));
+                c.getContext('2d').drawImage(srcCanvas, 0, 0, c.width, c.height);
+                out = c.toDataURL('image/jpeg', 0.6);
+                if (out.length <= 45000) return out;
+            }
+            return '';
+        }
+
+        function previewSelectedLeaveFile() {
+            const input = document.getElementById('leave-file');
+            const img = document.getElementById('leave-file-preview');
+            const f = input.files && input.files[0];
+            if (f && f.type.startsWith('image/')) {
+                img.src = URL.createObjectURL(f);
+                img.classList.remove('hidden');
+            } else {
+                img.classList.add('hidden');
+                img.removeAttribute('src');
+            }
+        }
+
         function getCurrentLocation() {
             return new Promise((resolve, reject) => {
                 if (!navigator.geolocation) {
@@ -402,8 +445,6 @@
             });
         }
 
-        // shows "getting location" on the main button, returns a Maps link,
-        // 'Unavailable' (if REQUIRE_LOCATION is false), or null if the action must be cancelled
         async function captureLocationLink(actionName) {
             const actionBtn = document.getElementById('user-action-btn');
             const actionBtnText = document.getElementById('user-btn-text');
@@ -432,89 +473,55 @@
             const m = {}; parts.forEach(p => m[p.type] = p.value);
             return (parseInt(m.hour, 10) % 24) * 60 + parseInt(m.minute, 10);
         }
-        // Work starts at 08:00 AM — anything after that counts as late
+        // Work starts at 08:00 — anything after that counts as late
         function isLateNow() { return getIraqMinutesNow() > 8 * 60; }
+
+        // Current Baghdad time as "HH:MM" (24h) — this is what is saved in the sheet
+        function getIraqTimeHHMM(date = new Date()) {
+            const mins = getIraqMinutesNow(date);
+            return String(Math.floor(mins / 60)).padStart(2, '0') + ':' + String(mins % 60).padStart(2, '0');
+        }
 
         function getIraqLocalDateString(date = new Date()) {
             try {
                 const options = { timeZone: 'Asia/Baghdad', year: 'numeric', month: '2-digit', day: '2-digit' };
-                const formatter = new Intl.DateTimeFormat('en-CA', options);
-                return formatter.format(date);
+                return new Intl.DateTimeFormat('en-CA', options).format(date);
             } catch (e) {
                 const d = new Date(date);
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                return `${year}-${month}-${day}`;
+                return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
             }
         }
 
-        function getIraqISOString(date = new Date()) {
-            try {
-                const options = { 
-                    timeZone: 'Asia/Baghdad', 
-                    year: 'numeric', 
-                    month: '2-digit', 
-                    day: '2-digit', 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    second: '2-digit', 
-                    hour12: false 
-                };
-                const formatter = new Intl.DateTimeFormat('en-CA', options);
-                const parts = formatter.formatToParts(date);
-                const partMap = {};
-                parts.forEach(p => partMap[p.type] = p.value);
-                
-                return `${partMap.year}-${partMap.month}-${partMap.day}T${partMap.hour}:${partMap.minute}:${partMap.second}.000+03:00`;
-            } catch (e) {
-                return new Date().toISOString();
-            }
-        }
-
-        function getCheckoutISOString(checkInDateStr, date = new Date()) {
-            try {
-                const optionsTime = { 
-                    timeZone: 'Asia/Baghdad', 
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    second: '2-digit', 
-                    hour12: false 
-                };
-                const formatterTime = new Intl.DateTimeFormat('en-CA', optionsTime);
-                const partsTime = formatterTime.formatToParts(date);
-                const partMapTime = {};
-                partsTime.forEach(p => partMapTime[p.type] = p.value);
-                
-                let baseDate = getIraqLocalDateString();
-                if (checkInDateStr) {
-                    baseDate = checkInDateStr.split('T')[0];
-                }
-                
-                return `${baseDate}T${partMapTime.hour}:${partMapTime.minute}:${partMapTime.second}.000+03:00`;
-            } catch (e) {
-                return new Date().toISOString();
-            }
-        }
-
+        // Any time value (HH:MM / "08:00 AM" / old ISO) -> "HH:MM" 24h, or "-" when empty
         function formatTime(timeString) {
             if (!timeString) return '-';
-            timeString = String(timeString);
-            if (timeString.includes('1899') || timeString === '-') return '-';
-            try {
-                const dateObj = new Date(timeString);
-                if (isNaN(dateObj.getTime())) {
-                    return timeString;
+            const t = String(timeString).trim();
+            if (t === '' || t === '-' || t.includes('1899')) return '-';
+
+            const m = t.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?$/i);
+            if (m) {
+                let h = parseInt(m[1], 10);
+                if (m[3]) {
+                    const p = m[3].toUpperCase();
+                    if (p === 'PM' && h < 12) h += 12;
+                    if (p === 'AM' && h === 12) h = 0;
                 }
-                return dateObj.toLocaleTimeString('en-US', { 
-                    timeZone: 'Asia/Baghdad',
-                    hour: '2-digit', 
-                    minute: '2-digit', 
-                    hour12: true 
-                });
-            } catch (error) {
-                return timeString;
+                return String(h).padStart(2, '0') + ':' + m[2];
             }
+            const d = new Date(t);
+            if (isNaN(d.getTime())) return t;
+            return getIraqTimeHHMM(d);
+        }
+
+        // Validates the admin's typed time. Returns "HH:MM", "-" (empty) or null (invalid)
+        function normalizeTimeInput(v) {
+            v = String(v || '').trim();
+            if (v === '' || v === '-') return '-';
+            const m = v.match(/^(\d{1,2}):(\d{2})$/);
+            if (!m) return null;
+            const h = parseInt(m[1], 10), mi = parseInt(m[2], 10);
+            if (h > 23 || mi > 59) return null;
+            return String(h).padStart(2, '0') + ':' + String(mi).padStart(2, '0');
         }
 
         function formatDate(dateString) {
@@ -533,9 +540,9 @@
                 if (recordDate < today && hasCheckedIn && hasNotCheckedOut) {
                     return {
                         ...record,
-                        checkOut: `${recordDate}T23:59:59.000+03:00`,
-                        note: record.note 
-                            ? `${record.note} (Auto-closed at midnight)` 
+                        checkOut: '23:59',
+                        note: record.note
+                            ? `${record.note} (Auto-closed at midnight)`
                             : 'Auto-closed at midnight'
                     };
                 }
@@ -543,16 +550,14 @@
             });
         }
 
-        // هێنانی داتا لە ڕێگەی doGet (Google Apps Script) لە کاتی باربوونی پەڕەکە یان لۆگیندا
         function updateVersionWarning() {
             const el = document.getElementById('version-warning');
             if (!el) return;
             el.classList.toggle('hidden', scriptVersion === REQUIRED_SCRIPT_VERSION);
         }
 
-        // After saving, re-read the sheet and make sure the location really arrived there.
         async function verifyLocationSaved(recId, field, sentValue) {
-            if (!safeUrl(sentValue)) return true;           // nothing to verify ("Unavailable")
+            if (!safeUrl(sentValue)) return true;
             await fetchSheetData();
             const rec = attendanceRecords.find(x => String(x.id) === String(recId));
             return !!(rec && safeUrl(rec[field]));
@@ -566,7 +571,7 @@
                 const data = await response.json();
                 scriptVersion = data.version || "";
                 updateVersionWarning();
-                
+
                 if (data.attendance && data.attendance.length > 1) {
                     let rawAtt = data.attendance.slice(1).map(row => ({
                         id: String(row[0]), name: row[1], date: row[2], checkIn: row[3], checkOut: row[4], status: row[5], note: row[6], location: row[7], checkoutLocation: row[8]
@@ -575,7 +580,7 @@
                 }
                 if (data.leaves && data.leaves.length > 1) {
                     leaveRequests = data.leaves.slice(1).map(row => ({
-                        id: String(row[0]), name: row[1], type: row[2], dates: row[3], note: row[4], fileName: row[5], status: row[6], fileUrl: row[7]
+                        id: String(row[0]), name: row[1], type: row[2], dates: row[3], note: row[4], fileName: row[5], status: row[6], fileUrl: row[7], fileMime: row[8], fileId: row[9], thumb: row[10], reason: row[11]
                     }));
                 }
                 if (data.holidays && data.holidays.length > 1) {
@@ -606,12 +611,33 @@
             }
         }
 
-        // لە کاتی کردنەوەی پەڕەکە (Page Load / Refresh) داتا دەهێنرێت و سێشنی پاشەکەوتکراو دەگەڕێندرێتەوە
         window.addEventListener('DOMContentLoaded', async () => {
             await fetchSheetData();
             restoreSession();
-            setInterval(() => { if (currentUser) checkTodayAttendanceState(); }, 30000);
+            setInterval(() => {
+                if (currentUser) { checkTodayAttendanceState(); refreshUserData(); }
+                else if (!document.getElementById('admin-dashboard').classList.contains('hidden')) refreshAdminData(false);
+            }, 30000);
         });
+
+        // Employee: pick up approve / reject decisions (and the reason) without a page refresh
+        async function refreshUserData() {
+            const sig = () => leaveRequests.map(x => x.id + x.status + (x.reason || '')).join('|');
+            const before = sig();
+            await fetchSheetData();
+            if (sig() !== before) refreshUserDashboardViews();
+        }
+
+        // Admin: re-read the sheet so new leave requests (with their images) appear without a page refresh
+        async function refreshAdminData(manual) {
+            const sig = () => leaveRequests.map(x => x.id + x.status).join('|') + '#' + attendanceRecords.length;
+            const before = sig();
+            await fetchSheetData();
+            if (manual || sig() !== before) {
+                updateAdminDashboard();
+                if (!document.getElementById('admin-tab-leaves').classList.contains('hidden')) renderAdminLeaves();
+            }
+        }
 
         function restoreSession() {
             const s = loadSession();
@@ -622,7 +648,6 @@
             if (s.role === 'admin') {
                 showAdminDashboard(s.tab || 'attendance');
             } else if (s.role === 'user' && s.name) {
-                // if the users list loaded and this user no longer exists, drop the session
                 if (systemUsers.length > 0 && !systemUsers.some(u => u.name === s.name)) {
                     clearSession();
                     showLoginView();
@@ -650,7 +675,6 @@
             const u = document.getElementById('login-user').value.trim();
             const p = document.getElementById('login-pass').value.trim();
 
-            // نوێترین داتا لە شیتەوە دەهێنرێت پێش پشکنینی لۆگین
             await fetchSheetData();
 
             const foundUser = systemUsers.find(x => x.username === u && x.password === p);
@@ -719,6 +743,7 @@
                 navHome.className = inactive;
                 navLeave.className = active;
                 renderUserMyLeaves();
+                refreshUserData();
             } else {
                 page = 'home';
                 leave.classList.add('hidden');
@@ -758,37 +783,104 @@
             } else {
                 fileContainer.classList.add('hidden');
                 document.getElementById('leave-file').value = '';
+                previewSelectedLeaveFile();
             }
         }
 
         function toggleLeaveHistoryFilter() {
             leaveFilterByMonth = !leaveFilterByMonth;
             const label = document.getElementById('leave-filter-mode-label');
-            if (leaveFilterByMonth) {
-                label.innerText = "(Filtered by Month 🔄)";
-            } else {
-                label.innerText = "(Showing All History 🌐)";
-            }
+            label.innerText = leaveFilterByMonth ? "(Filtered by Month 🔄)" : "(Showing All History 🌐)";
             renderUserMyLeaves();
         }
 
-        // clickable link to the uploaded PDF / image (falls back to plain file name for old requests)
-        function leaveFileHtml(req, label) {
-            const url = safeUrl(req.fileUrl);
-            if (url) {
-                return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="inline-block mt-1 px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[10px] font-semibold hover:bg-indigo-100">📄 ${label || 'View file'}${req.fileName ? ' — ' + escapeHtml(req.fileName) : ''}</a>`;
+        // ---------------- Leave file viewer (image / PDF) ----------------
+        // The file is fetched from Google Drive through the Apps Script (so it works
+        // even if Drive sharing is restricted) and shown inside the page.
+        const mediaCache = {};
+
+        function getLeaveFileId(req) {
+            let fid = String(req.fileId || '').trim();
+            if (!fid) {
+                const url = safeUrl(req.fileUrl);
+                const m = url.match(/\/d\/([^\/?]+)/) || url.match(/[?&]id=([^&]+)/);
+                if (m) fid = m[1];
             }
-            if (req.fileName) return `<p class="text-[10px] text-slate-400 font-mono mt-0.5">📎 ${escapeHtml(req.fileName)} (file not available)</p>`;
-            return '';
+            return fid;
+        }
+
+        function leaveFileHtml(req, label) {
+            const fid = getLeaveFileId(req);
+            const url = safeUrl(req.fileUrl);
+            const thumb = /^data:image\/(jpeg|png|webp);base64,/.test(String(req.thumb || '')) ? req.thumb : '';
+            const id = escapeHtml(req.id);
+
+            if (!fid && !url && !thumb) {
+                if (req.fileName) return `<p class="text-[10px] text-rose-500 mt-0.5">📎 ${escapeHtml(req.fileName)} — the file was NOT saved (Apps Script needs Drive permission: run authorizeDrive and redeploy).</p>`;
+                return '';
+            }
+            let html = `<div class="mt-1 space-y-1">`;
+            // the small preview is always visible — no extra loading needed
+            if (thumb) {
+                html += `<img src="${thumb}" ${fid ? `onclick="loadLeaveMedia('${id}')"` : ''} class="max-h-48 rounded-lg border border-slate-200 bg-white ${fid ? 'cursor-pointer' : ''}" title="Click for full size" alt="Medical report">`;
+            }
+            if (fid) {
+                html += `<div><button onclick="loadLeaveMedia('${id}')" class="inline-block px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[10px] font-semibold hover:bg-indigo-100">${thumb ? '🔍 Full size' : '📄 ' + escapeHtml(label || 'View file')}${req.fileName ? ' — ' + escapeHtml(req.fileName) : ''}</button></div>`;
+                html += `<div id="media-${id}" class="hidden"></div>`;
+            }
+            if (url) {
+                html += `<div><a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="text-[10px] text-indigo-600 hover:underline">↗ Open in Google Drive</a></div>`;
+            }
+            return html + `</div>`;
+        }
+
+        async function loadLeaveMedia(id) {
+            const box = document.getElementById('media-' + id);
+            if (!box) return;
+            if (box.dataset.loaded && !box.classList.contains('hidden')) {
+                box.classList.add('hidden');
+                return;
+            }
+            box.classList.remove('hidden');
+            if (box.dataset.loaded) return;
+
+            const req = leaveRequests.find(x => String(x.id) === String(id));
+            const fid = req ? getLeaveFileId(req) : '';
+            if (!fid) return;
+
+            box.innerHTML = '<div class="text-[10px] text-slate-400">Loading file...</div>';
+            try {
+                if (!mediaCache[fid]) {
+                    const r = await fetch(SCRIPT_URL + '?fileId=' + encodeURIComponent(fid));
+                    const j = await r.json();
+                    if (!j.ok) throw new Error(j.error || 'Apps Script is an old version - redeploy it as New version');
+                    const bin = atob(j.data);
+                    const bytes = new Uint8Array(bin.length);
+                    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+                    mediaCache[fid] = {
+                        mime: j.mime,
+                        url: URL.createObjectURL(new Blob([bytes], { type: j.mime }))
+                    };
+                }
+                const m = mediaCache[fid];
+                if (String(m.mime).startsWith('image/')) {
+                    box.innerHTML = `<a href="${m.url}" target="_blank" rel="noopener" title="Open full size"><img src="${m.url}" class="max-h-96 w-full object-contain rounded-lg border border-slate-200 bg-white" alt="Medical report"></a>`;
+                } else {
+                    box.innerHTML = `<iframe src="${m.url}" class="w-full h-72 rounded-lg border border-slate-200 bg-white"></iframe><a href="${m.url}" target="_blank" rel="noopener" class="text-[10px] text-indigo-600 hover:underline">↗ Open PDF in new tab</a>`;
+                }
+                box.dataset.loaded = '1';
+            } catch (err) {
+                box.innerHTML = `<div class="text-[10px] text-rose-500">Could not load the file: ${escapeHtml(err.message)}<br><a class="text-indigo-600 underline" target="_blank" rel="noopener" href="https://drive.google.com/file/d/${encodeURIComponent(fid)}/view">Open in Google Drive</a></div>`;
+            }
         }
 
         function renderUserMyLeaves() {
             const container = document.getElementById('user-my-leaves-list');
             const selectedYM = document.getElementById('user-leave-month').value;
             document.getElementById('user-leave-month').style.display = leaveFilterByMonth ? '' : 'none';
-            
+
             container.innerHTML = '';
-            
+
             let myLeaves = leaveRequests.filter(x => x.name === currentUser);
             if (leaveFilterByMonth && selectedYM) {
                 myLeaves = myLeaves.filter(x => x.dates && x.dates.includes(selectedYM));
@@ -805,14 +897,15 @@
                 if (req.status === 'Rejected') badgeColor = "bg-rose-100 text-rose-700 border-rose-200";
 
                 container.innerHTML += `
-                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex justify-between items-center">
-                        <div>
-                            <p class="font-bold text-slate-700">${req.type || req.leaveType}</p>
-                            <p class="text-[10px] text-slate-400">${req.dates}</p>
-                            ${req.note ? `<p class="text-[10px] text-slate-600 mt-0.5">Note: ${req.note}</p>` : ''}
+                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200 flex justify-between items-start gap-2">
+                        <div class="min-w-0 flex-1">
+                            <p class="font-bold text-slate-700">${escapeHtml(req.type || req.leaveType)}</p>
+                            <p class="text-[10px] text-slate-400">${escapeHtml(req.dates)}</p>
+                            ${req.note ? `<p class="text-[10px] text-slate-600 mt-0.5">Note: ${escapeHtml(req.note)}</p>` : ''}
+                            ${req.status === 'Rejected' && req.reason ? `<p class="text-[10px] text-rose-600 font-semibold mt-0.5">❌ Rejection reason: ${escapeHtml(req.reason)}</p>` : ''}
                             ${leaveFileHtml(req, 'View my file')}
                         </div>
-                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeColor}">${req.status}</span>
+                        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeColor}">${escapeHtml(req.status)}</span>
                     </div>
                 `;
             });
@@ -917,7 +1010,6 @@
             const hasCheckedIn = existingRec && existingRec.checkIn && existingRec.checkIn !== '-' && !existingRec.checkIn.includes('1899');
             const hasCheckedOut = existingRec && existingRec.checkOut && existingRec.checkOut !== '-' && !existingRec.checkOut.includes('1899');
 
-            // the reason box appears ONLY when the user hasn't checked in yet AND it is already after 8:00 AM
             if (!hasCheckedIn && isLateNow()) {
                 noteWrapper.classList.remove('hidden');
             } else {
@@ -950,7 +1042,7 @@
         async function handleUserCheckInOut() {
             const todayStr = getIraqLocalDateString();
             const note = document.getElementById('user-checkin-note').value.trim();
-            const currentTime = getIraqISOString();
+            const currentTime = getIraqTimeHHMM();   // "HH:MM"
 
             let existingRec = attendanceRecords.find(x => {
                 if (!x.name || !x.date) return false;
@@ -969,12 +1061,11 @@
             if (!existingRec || !hasCheckedIn) {
                 const late = isLateNow();
                 if (late && !note) {
-                    alert("You are late (after 8:00 AM). Please write the reason first.");
+                    alert("You are late (after 08:00). Please write the reason first.");
                     document.getElementById('user-checkin-note').focus();
                     return;
                 }
 
-                // ---- capture the location right now ----
                 const actionBtn = document.getElementById('user-action-btn');
                 const actionBtnText = document.getElementById('user-btn-text');
                 actionBtn.disabled = true;
@@ -1003,7 +1094,7 @@
                     note: late ? note : "",
                     location: locationLink
                 };
-                
+
                 attendanceRecords.push(newRec);
                 await sendToSheet({ type: 'attendance', ...newRec });
                 document.getElementById('user-checkin-note').value = '';
@@ -1018,17 +1109,17 @@
                 const checkoutLoc = await captureLocationLink("Check-out");
                 if (checkoutLoc === null) return;
 
-                const checkoutTime = getCheckoutISOString(existingRec.checkIn);
+                const checkoutTime = getIraqTimeHHMM();   // "HH:MM"
                 existingRec.checkOut = checkoutTime;
                 existingRec.checkoutLocation = checkoutLoc;
 
-                await sendToSheet({ 
-                    type: 'attendance', 
+                await sendToSheet({
+                    type: 'attendance',
                     id: String(existingRec.id),
                     name: existingRec.name,
                     date: existingRec.date,
-                    checkIn: existingRec.checkIn, 
-                    checkOut: checkoutTime,        
+                    checkIn: formatTime(existingRec.checkIn),
+                    checkOut: checkoutTime,
                     status: existingRec.status,
                     note: existingRec.note,
                     checkoutLocation: checkoutLoc
@@ -1059,6 +1150,7 @@
             let fileName = '';
             let fileMime = '';
             let fileData = '';
+            let thumbData = '';
             const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
 
             if (type === 'Sick Leave' && !file) {
@@ -1072,7 +1164,7 @@
                     alert("Only PDF or image files are allowed.");
                     return;
                 }
-                if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+                if (file.size > MAX_UPLOAD_MB * 1024 * 1024 && file.type === 'application/pdf') {
                     alert(`The file is too large. Maximum size is ${MAX_UPLOAD_MB} MB.`);
                     return;
                 }
@@ -1084,9 +1176,11 @@
 
             try {
                 if (file) {
-                    fileName = file.name;
-                    fileMime = file.type;
-                    fileData = await readFileAsBase64(file);
+                    const prepared = await prepareUploadFile(file);
+                    fileName = prepared.name;
+                    fileMime = prepared.mime;
+                    fileData = prepared.data;
+                    thumbData = prepared.thumb || '';
                 }
 
                 const newLeave = {
@@ -1099,13 +1193,14 @@
                     status: "Pending"
                 };
 
-                leaveRequests.push({ ...newLeave, type: type });
-                await sendToSheet({ type: 'leave', ...newLeave, fileMime, fileData });
+                leaveRequests.push({ ...newLeave, type: type, thumb: thumbData });
+                await sendToSheet({ type: 'leave', ...newLeave, fileMime, fileData, thumbData });
 
                 document.getElementById('leave-note').value = '';
                 fileInput.value = '';
+                previewSelectedLeaveFile();
 
-                // re-fetch so the uploaded file's link (saved by the server) shows up right away
+                // re-fetch so the file id / link saved by the server shows up right away
                 await fetchSheetData();
                 refreshUserDashboardViews();
                 alert("Leave application submitted successfully!");
@@ -1128,7 +1223,7 @@
             const lea = document.getElementById('admin-tab-leaves');
             const usr = document.getElementById('admin-tab-users');
             const hol = document.getElementById('admin-tab-holidays');
-            
+
             att.classList.add('hidden');
             lea.classList.add('hidden');
             usr.classList.add('hidden');
@@ -1167,10 +1262,10 @@
             systemUsers.forEach(u => {
                 tbody.innerHTML += `
                     <tr>
-                        <td class="p-2.5 font-mono text-slate-600">${u.id || '-'}</td>
-                        <td class="p-2.5 font-semibold text-slate-800">${u.name || '-'}</td>
-                        <td class="p-2.5 text-slate-600">${u.username || '-'}</td>
-                        <td class="p-2.5"><span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[10px] font-semibold">${u.role || 'User'}</span></td>
+                        <td class="p-2.5 font-mono text-slate-600">${escapeHtml(u.id || '-')}</td>
+                        <td class="p-2.5 font-semibold text-slate-800">${escapeHtml(u.name || '-')}</td>
+                        <td class="p-2.5 text-slate-600">${escapeHtml(u.username || '-')}</td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded text-[10px] font-semibold">${escapeHtml(u.role || 'User')}</span></td>
                     </tr>
                 `;
             });
@@ -1231,20 +1326,20 @@
                 tbody.innerHTML += `
                     <tr>
                         <td class="p-2.5 font-semibold text-slate-800 flex items-center gap-2">
-                            <span onclick="openAdminDrilldown('${row.name}')" class="text-indigo-600 hover:underline cursor-pointer">${row.name}</span>
+                            <span onclick="openAdminDrilldown('${escapeHtml(row.name).replace(/'/g, '&#39;')}')" class="text-indigo-600 hover:underline cursor-pointer">${escapeHtml(row.name)}</span>
                         </td>
                         <td class="p-2.5 font-mono text-slate-600">${cleanDateVal}</td>
                         <td class="p-2.5 text-slate-600">
-                            ${inTimeStr} / ${outTimeStr}
+                            <span class="font-mono">${inTimeStr} / ${outTimeStr}</span>
                             ${safeUrl(row.location) ? `<br><a href="${escapeHtml(safeUrl(row.location))}" target="_blank" rel="noopener" class="text-[10px] text-indigo-600 font-semibold hover:underline">📍 Check-in location</a>` : ''}
                             ${(!safeUrl(row.location) && row.checkIn && row.checkIn !== '-') ? `<br><span class="text-[10px] text-slate-400">📍 no check-in location recorded</span>` : ''}
                             ${safeUrl(row.checkoutLocation) ? `<br><a href="${escapeHtml(safeUrl(row.checkoutLocation))}" target="_blank" rel="noopener" class="text-[10px] text-rose-600 font-semibold hover:underline">📍 Check-out location</a>` : ''}
-                            ${row.note ? `<br><span class="text-[10px] text-amber-600 font-semibold">Note: ${row.note}</span>` : ''}
+                            ${row.note ? `<br><span class="text-[10px] text-amber-600 font-semibold">Note: ${escapeHtml(row.note)}</span>` : ''}
                         </td>
-                        <td class="p-2.5"><span class="px-2 py-0.5 ${color} rounded text-[10px] font-semibold">${row.status}</span></td>
+                        <td class="p-2.5"><span class="px-2 py-0.5 ${color} rounded text-[10px] font-semibold">${escapeHtml(row.status)}</span></td>
                         <td class="p-2.5 text-right flex justify-end gap-2 items-center">
-                            <button onclick="openEditModal('${row.id}')" class="text-indigo-600 hover:text-indigo-800 font-semibold" title="Edit">✏️</button>
-                            <button onclick="deleteRecord('${row.id}')" class="text-rose-500 hover:text-rose-700 font-semibold" title="Delete">🗑️</button>
+                            <button onclick="openEditModal('${escapeHtml(row.id)}')" class="text-indigo-600 hover:text-indigo-800 font-semibold" title="Edit">✏️</button>
+                            <button onclick="deleteRecord('${escapeHtml(row.id)}')" class="text-rose-500 hover:text-rose-700 font-semibold" title="Delete">🗑️</button>
                         </td>
                     </tr>
                 `;
@@ -1255,12 +1350,15 @@
             const rec = attendanceRecords.find(x => x.id == id);
             if (!rec) return;
 
+            const inT = formatTime(rec.checkIn);
+            const outT = formatTime(rec.checkOut);
+
             document.getElementById('modal-title').innerText = "Edit Attendance";
             document.getElementById('modal-record-id').value = rec.id;
             document.getElementById('modal-name').value = rec.name;
             document.getElementById('modal-date').value = formatDate(rec.date);
-            document.getElementById('modal-in').value = formatTime(rec.checkIn);
-            document.getElementById('modal-out').value = formatTime(rec.checkOut);
+            document.getElementById('modal-in').value = inT === '-' ? '' : inT;
+            document.getElementById('modal-out').value = outT === '-' ? '' : outT;
             document.getElementById('modal-status').value = rec.status;
             document.getElementById('manual-modal').classList.remove('hidden');
         }
@@ -1272,9 +1370,14 @@
         async function saveManualRecord() {
             const id = document.getElementById('modal-record-id').value;
             const date = document.getElementById('modal-date').value;
-            const checkIn = document.getElementById('modal-in').value;
-            const checkOut = document.getElementById('modal-out').value;
+            const checkIn = normalizeTimeInput(document.getElementById('modal-in').value);
+            const checkOut = normalizeTimeInput(document.getElementById('modal-out').value);
             const status = document.getElementById('modal-status').value;
+
+            if (checkIn === null || checkOut === null) {
+                alert("Please enter time as HH:MM (24-hour), for example 08:00 or 16:30.");
+                return;
+            }
 
             if (id) {
                 const rec = attendanceRecords.find(x => x.id == id);
@@ -1313,7 +1416,6 @@
             const statusSel = document.getElementById('admin-leave-status-filter');
             const userSel = document.getElementById('admin-leave-user-filter');
 
-            // rebuild the employee filter from the real data (keeping the current selection)
             const prevUser = userSel.value || 'all';
             const names = [...new Set(leaveRequests.map(x => x.name).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
             userSel.innerHTML = '<option value="all">All Employees</option>' +
@@ -1339,31 +1441,43 @@
                 if (req.status === 'Rejected') badgeColor = "bg-rose-100 text-rose-700 border-rose-200";
 
                 const actions = req.status === 'Pending'
-                    ? `<div class="flex gap-1.5">
+                    ? `<div class="flex flex-col gap-1.5 shrink-0">
                             <button onclick="handleLeaveAction('${escapeHtml(req.id)}', 'Approved')" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold">Approve</button>
                             <button onclick="handleLeaveAction('${escapeHtml(req.id)}', 'Rejected')" class="bg-rose-100 text-rose-600 px-2.5 py-1 rounded-lg font-semibold">Reject</button>
                        </div>`
-                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeColor}">${escapeHtml(req.status)}</span>`;
+                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border shrink-0 ${badgeColor}">${escapeHtml(req.status)}</span>`;
 
                 container.innerHTML += `
-                    <div class="bg-white p-3 rounded-2xl border border-slate-100 flex justify-between items-center gap-2 text-xs shadow-sm">
-                        <div>
+                    <div class="bg-white p-3 rounded-2xl border border-slate-100 flex justify-between items-start gap-2 text-xs shadow-sm">
+                        <div class="min-w-0 flex-1">
                             <p class="font-bold text-slate-800">${escapeHtml(req.name)} <span class="font-normal text-slate-500">(${escapeHtml(req.type || req.leaveType)})</span></p>
                             <p class="text-[10px] text-slate-400">Duration: ${escapeHtml(req.dates)}</p>
                             ${req.note ? `<p class="text-[10px] text-slate-600 mt-0.5">Note: ${escapeHtml(req.note)}</p>` : ''}
+                            ${req.status === 'Rejected' && req.reason ? `<p class="text-[10px] text-rose-600 font-semibold mt-0.5">❌ Rejection reason: ${escapeHtml(req.reason)}</p>` : ''}
                             ${leaveFileHtml(req, 'View report / photo')}
                         </div>
                         ${actions}
                     </div>
                 `;
             });
+
+            // pending requests: show the image right away so the admin can decide
+            list.filter(x => x.status === 'Pending' && getLeaveFileId(x) && !x.thumb).forEach(x => loadLeaveMedia(x.id));
         }
 
         async function handleLeaveAction(id, action) {
             const req = leaveRequests.find(x => x.id == id);
+            let reason = '';
+            if (req && action === 'Rejected') {
+                const input = prompt("Write the reason for rejecting this request.\n(The employee will see this reason)");
+                if (input === null) return;                       // admin cancelled
+                reason = input.trim();
+                if (!reason) { alert("Please write a reason for the rejection."); return; }
+            }
             if (req) {
                 req.status = action;
-                await sendToSheet({ type: 'leaveStatus', id: String(req.id), status: action });
+                req.reason = reason;
+                await sendToSheet({ type: 'leaveStatus', id: String(req.id), status: action, reason: reason });
 
                 if (action === 'Approved') {
                     const newAttRec = {
@@ -1395,7 +1509,7 @@
                 container.innerHTML += `
                     <div class="bg-white p-3 rounded-xl border border-slate-100 flex justify-between items-center shadow-xs">
                         <div>
-                            <span class="font-bold font-mono text-slate-800">${h.date}</span> - <span class="text-slate-600">${h.name}</span>
+                            <span class="font-bold font-mono text-slate-800">${escapeHtml(h.date)}</span> - <span class="text-slate-600">${escapeHtml(h.name)}</span>
                         </div>
                         <button onclick="removeHoliday(${index})" class="text-rose-500 font-semibold">Remove</button>
                     </div>
