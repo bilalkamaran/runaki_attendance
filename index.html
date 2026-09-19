@@ -16,6 +16,9 @@
     <!-- Container -->
     <div id="app-container" class="w-full max-w-md bg-white min-h-screen sm:min-h-[850px] sm:rounded-3xl shadow-2xl flex flex-col justify-between overflow-hidden relative border border-slate-200 transition-all duration-300">
         
+        <!-- Session restore placeholder (shown while a saved session is being restored after refresh) -->
+        <div id="session-loading" class="hidden flex-1 flex items-center justify-center text-slate-400 text-sm">Loading...</div>
+
         <!-- ================= 1. LOGIN VIEW ================= -->
         <div id="login-view" class="flex-1 p-6 flex flex-col justify-center space-y-6">
             <div class="text-center space-y-2">
@@ -54,70 +57,85 @@
             </header>
 
             <main class="p-5 flex-1 overflow-y-auto space-y-5">
-                <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-5 rounded-2xl shadow-lg space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h3 class="text-xs font-medium text-slate-300">Today's Attendance</h3>
-                        <div id="user-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
-                            Not Checked-In
-                        </div>
-                    </div>
-                    <div>
-                        <input type="text" id="user-checkin-note" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl p-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400" placeholder="Add note / reason if late (optional)...">
-                    </div>
-                    <button id="user-action-btn" onclick="handleUserCheckInOut()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md text-sm">
-                        <span id="user-btn-text">Check-In Now</span>
-                    </button>
-                </div>
 
-                <!-- Request Leave Section -->
-                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
-                    <h4 class="font-bold text-slate-700 text-xs">🏖️ Request Leave / Vacation</h4>
-                    <div class="space-y-2 text-xs">
-                        <select id="leave-type" onchange="toggleLeaveFileField()" class="w-full border border-slate-200 rounded-xl p-2 bg-slate-50">
-                            <option value="Sick Leave">Sick Leave (Medical Report Required)</option>
-                            <option value="Unpaid Leave">Unpaid Leave</option>
-                            <option value="Annual Vacation">Annual Vacation</option>
-                        </select>
-                        <div class="grid grid-cols-2 gap-2">
-                            <input type="date" id="leave-start" class="border border-slate-200 rounded-xl p-2">
-                            <input type="date" id="leave-end" class="border border-slate-200 rounded-xl p-2">
+                <!-- ===== PAGE 1: HOME (attendance + calendar) ===== -->
+                <div id="user-page-home" class="space-y-5">
+                    <div class="bg-gradient-to-br from-slate-900 to-indigo-950 text-white p-5 rounded-2xl shadow-lg space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xs font-medium text-slate-300">Today's Attendance</h3>
+                            <div id="user-status-badge" class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                                Not Checked-In
+                            </div>
                         </div>
-                        <div>
-                            <input type="text" id="leave-note" placeholder="Write a note or reason..." class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50">
+                        <!-- Reason box: only visible when the user is checking in AFTER 8:00 AM -->
+                        <div id="user-note-wrapper" class="hidden space-y-1">
+                            <p class="text-[10px] text-amber-300 font-semibold">⏰ You are late (after 8:00 AM) — please write the reason:</p>
+                            <input type="text" id="user-checkin-note" class="w-full bg-slate-800/80 border border-slate-700 rounded-xl p-2.5 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-400" placeholder="Reason for being late (required)...">
                         </div>
-                        <div id="leave-file-container">
-                            <label class="block text-[10px] font-semibold text-rose-500 mb-1">Attach Medical Report <span class="font-bold">* (Mandatory for Sick Leave)</span></label>
-                            <input type="file" id="leave-file" class="w-full border border-slate-200 rounded-xl p-1.5 bg-slate-50 text-[10px] file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                        <button id="user-action-btn" onclick="handleUserCheckInOut()" class="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-md text-sm">
+                            <span id="user-btn-text">Check-In Now</span>
+                        </button>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-700 text-xs">📅 Monthly Calendar Status</h4>
+                            <input type="month" id="user-calendar-month" onchange="onUserMonthChange()" class="text-xs border border-slate-200 rounded-xl p-1.5 bg-slate-50 font-mono">
                         </div>
-                        <button onclick="submitLeaveRequest()" class="w-full bg-slate-800 text-white py-2 rounded-xl font-semibold hover:bg-slate-700 transition-all">Submit Leave Request</button>
+                        <div class="flex flex-wrap gap-2 text-[10px] text-slate-500">
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Present</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Absent</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Late/Leave</span>
+                            <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-600"></span> Holiday</span>
+                        </div>
+                        <div id="user-calendar-grid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
                     </div>
                 </div>
 
-                <!-- My Leave Requests History -->
-                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h4 onclick="toggleLeaveHistoryFilter()" id="user-leave-history-title" class="font-bold text-slate-700 text-xs cursor-pointer hover:text-indigo-600 transition-colors flex items-center gap-1 select-none" title="Click to toggle filter between All Time and Selected Month">
-                            📜 My Leave History <span id="leave-filter-mode-label" class="text-[9px] text-indigo-500 font-normal">(Filtered by Month 🔄)</span>
-                        </h4>
-                        <span id="user-leave-month-label" class="text-[10px] text-slate-400 font-mono"></span>
+                <!-- ===== PAGE 2: LEAVES (request + my history) ===== -->
+                <div id="user-page-leave" class="hidden space-y-5">
+                    <!-- Request Leave Section -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                        <h4 class="font-bold text-slate-700 text-xs">🏖️ Request Leave / Vacation</h4>
+                        <div class="space-y-2 text-xs">
+                            <select id="leave-type" onchange="toggleLeaveFileField()" class="w-full border border-slate-200 rounded-xl p-2 bg-slate-50">
+                                <option value="Sick Leave">Sick Leave (Medical Report Required)</option>
+                                <option value="Unpaid Leave">Unpaid Leave</option>
+                                <option value="Annual Vacation">Annual Vacation</option>
+                            </select>
+                            <div class="grid grid-cols-2 gap-2">
+                                <input type="date" id="leave-start" class="border border-slate-200 rounded-xl p-2">
+                                <input type="date" id="leave-end" class="border border-slate-200 rounded-xl p-2">
+                            </div>
+                            <div>
+                                <input type="text" id="leave-note" placeholder="Write a note or reason..." class="w-full border border-slate-200 rounded-xl p-2.5 bg-slate-50">
+                            </div>
+                            <div id="leave-file-container">
+                                <label class="block text-[10px] font-semibold text-rose-500 mb-1">Attach Medical Report <span class="font-bold">* (Mandatory for Sick Leave)</span></label>
+                                <input type="file" id="leave-file" accept="application/pdf,image/*" class="w-full border border-slate-200 rounded-xl p-1.5 bg-slate-50 text-[10px] file:mr-2 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                            </div>
+                            <button id="leave-submit-btn" onclick="submitLeaveRequest()" class="w-full bg-slate-800 text-white py-2 rounded-xl font-semibold hover:bg-slate-700 transition-all">Submit Leave Request</button>
+                        </div>
                     </div>
-                    <div id="user-my-leaves-list" class="space-y-2 text-xs"></div>
-                </div>
 
-                <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
-                    <div class="flex justify-between items-center">
-                        <h4 class="font-bold text-slate-700 text-xs">📅 Monthly Calendar Status</h4>
-                        <input type="month" id="user-calendar-month" onchange="onUserMonthChange()" class="text-xs border border-slate-200 rounded-xl p-1.5 bg-slate-50 font-mono">
+                    <!-- My Leave Requests History -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+                        <div class="flex justify-between items-center gap-2">
+                            <h4 onclick="toggleLeaveHistoryFilter()" id="user-leave-history-title" class="font-bold text-slate-700 text-xs cursor-pointer hover:text-indigo-600 transition-colors flex items-center gap-1 select-none" title="Click to toggle filter between All Time and Selected Month">
+                                📜 My Leave History <span id="leave-filter-mode-label" class="text-[9px] text-indigo-500 font-normal">(Filtered by Month 🔄)</span>
+                            </h4>
+                            <input type="month" id="user-leave-month" onchange="renderUserMyLeaves()" class="text-xs border border-slate-200 rounded-xl p-1.5 bg-slate-50 font-mono">
+                        </div>
+                        <div id="user-my-leaves-list" class="space-y-2 text-xs"></div>
                     </div>
-                    <div class="flex flex-wrap gap-2 text-[10px] text-slate-500">
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Present</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Absent</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Late/Leave</span>
-                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-slate-100"></span> Holiday</span>
-                    </div>
-                    <div id="user-calendar-grid" class="grid grid-cols-7 gap-1.5 text-center text-xs pt-1"></div>
                 </div>
             </main>
+
+            <!-- Bottom navigation -->
+            <nav class="grid grid-cols-2 border-t border-slate-200 bg-white text-xs font-semibold">
+                <button id="user-nav-home" onclick="switchUserPage('home')" class="py-3.5 text-indigo-600 border-t-2 border-indigo-600 -mt-px bg-indigo-50/50">🏠 Home</button>
+                <button id="user-nav-leave" onclick="switchUserPage('leave')" class="py-3.5 text-slate-400 hover:text-slate-600 border-t-2 border-transparent -mt-px">🏖️ Leaves</button>
+            </nav>
         </div>
 
         <!-- ================= 3. ADMIN DASHBOARD VIEW ================= -->
@@ -133,6 +151,12 @@
             </header>
 
             <main class="p-5 flex-1 overflow-y-auto space-y-4">
+
+                <!-- Shown only when the deployed Apps Script is outdated -->
+                <div id="version-warning" class="hidden bg-rose-50 border border-rose-300 text-rose-700 rounded-2xl p-3 text-xs space-y-1">
+                    <p class="font-bold">⚠️ Google Apps Script is outdated</p>
+                    <p>Locations and leave files will NOT be saved to the sheet until you update it: paste the new <span class="font-mono">goht.txt</span> code, then <b>Deploy → Manage deployments → ✏️ Edit → Version: New version → Deploy</b> (and run <span class="font-mono">authorizeDrive</span> once).</p>
+                </div>
                 
                 <!-- KPI Stat Cards -->
                 <div class="grid grid-cols-3 gap-2">
@@ -205,7 +229,23 @@
 
                 <!-- TAB 2: LEAVE REQUESTS -->
                 <div id="admin-tab-leaves" class="hidden space-y-2">
-                    <h4 class="font-bold text-slate-700 text-xs">Pending Leave Applications</h4>
+                    <div class="bg-slate-50 p-3.5 rounded-2xl border border-slate-200 space-y-2">
+                        <div class="flex justify-between items-center">
+                            <h4 class="font-bold text-slate-700 text-xs">All Leave Requests (all employees)</h4>
+                            <span id="admin-leave-count" class="text-[10px] text-slate-400 font-mono"></span>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="admin-leave-status-filter" onchange="renderAdminLeaves()" class="text-xs border border-slate-200 rounded-xl p-1.5 bg-white">
+                                <option value="all">All Statuses</option>
+                                <option value="Pending">Pending</option>
+                                <option value="Approved">Approved</option>
+                                <option value="Rejected">Rejected</option>
+                            </select>
+                            <select id="admin-leave-user-filter" onchange="renderAdminLeaves()" class="text-xs border border-slate-200 rounded-xl p-1.5 bg-white">
+                                <option value="all">All Employees</option>
+                            </select>
+                        </div>
+                    </div>
                     <div id="admin-leaves-list" class="space-y-2"></div>
                 </div>
 
@@ -288,7 +328,7 @@
 
     <!-- JavaScript Application Engine -->
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwO4b3Zd1-rFP6rs7E9ubw0J9VUSyb0FWVdFawL6-uBwogOwNjRG5N5DG53wOZkypTC/exec";
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyReoQbQH0HGKSEdhkifCN4gjlO4ekIEZwB1KzBuOCCLllEEjPbzK0M71iUaHBYS0-J/exec";
 
         let currentUser = "";
         let attendanceRecords = [];
@@ -297,6 +337,103 @@
         let systemUsers = [];
 
         let leaveFilterByMonth = true;
+
+        // ---------------- Settings ----------------
+        // true  = check-in is BLOCKED if the location can't be captured
+        // false = check-in still works, location is saved as "Unavailable"
+        const REQUIRE_LOCATION = true;
+        // max size of the uploaded leave file (PDF / image)
+        const MAX_UPLOAD_MB = 5;
+        // must match SCRIPT_VERSION inside the Apps Script (goht.txt). If it doesn't, the
+        // admin sees a red warning = the Apps Script was NOT redeployed as a "New version".
+        const REQUIRED_SCRIPT_VERSION = "v4-checkinout-sheet";
+        let scriptVersion = "";
+
+        // ---------------- Session persistence (survives page refresh) ----------------
+        const SESSION_KEY = 'runaki_session';
+        function saveSession(s) { try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch (e) {} }
+        function loadSession() { try { return JSON.parse(localStorage.getItem(SESSION_KEY) || 'null'); } catch (e) { return null; } }
+        function clearSession() { try { localStorage.removeItem(SESSION_KEY); } catch (e) {} }
+        function updateSession(patch) { const s = loadSession(); if (s) saveSession({ ...s, ...patch }); }
+
+        // If a saved session exists, don't flash the login form while data is loading
+        if (loadSession()) {
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('session-loading').classList.remove('hidden');
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        }
+
+        // only allow real https links (for file / location links coming from the sheet)
+        function safeUrl(u) {
+            u = String(u == null ? '' : u).trim();
+            return /^https:\/\//i.test(u) ? u : '';
+        }
+
+        function readFileAsBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(String(reader.result).split(',')[1] || '');
+                reader.onerror = () => reject(new Error('Could not read the file.'));
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Capture the device GPS position -> { lat, lng }
+        function getCurrentLocation() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    reject(new Error('Location is not supported by this browser/device.'));
+                    return;
+                }
+                navigator.geolocation.getCurrentPosition(
+                    pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+                    err => {
+                        let msg = 'Could not get your location.';
+                        if (err.code === 1) msg = 'Location permission was denied. Please allow location access for this site in your browser settings, then try again.';
+                        else if (err.code === 2) msg = 'Your location is unavailable right now. Please turn on GPS / location services and try again.';
+                        else if (err.code === 3) msg = 'Getting your location took too long. Please try again.';
+                        reject(new Error(msg));
+                    },
+                    { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                );
+            });
+        }
+
+        // shows "getting location" on the main button, returns a Maps link,
+        // 'Unavailable' (if REQUIRE_LOCATION is false), or null if the action must be cancelled
+        async function captureLocationLink(actionName) {
+            const actionBtn = document.getElementById('user-action-btn');
+            const actionBtnText = document.getElementById('user-btn-text');
+            actionBtn.disabled = true;
+            actionBtnText.innerText = "📍 Getting your location...";
+            try {
+                const pos = await getCurrentLocation();
+                return buildMapsLink(pos.lat, pos.lng);
+            } catch (err) {
+                if (REQUIRE_LOCATION) {
+                    alert(actionName + " cancelled.\n\n" + err.message);
+                    checkTodayAttendanceState();
+                    return null;
+                }
+                return 'Unavailable';
+            }
+        }
+
+        function buildMapsLink(lat, lng) {
+            return `https://www.google.com/maps?q=${lat.toFixed(6)},${lng.toFixed(6)}`;
+        }
+
+        // Minutes since midnight in Baghdad time
+        function getIraqMinutesNow(date = new Date()) {
+            const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Baghdad', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(date);
+            const m = {}; parts.forEach(p => m[p.type] = p.value);
+            return (parseInt(m.hour, 10) % 24) * 60 + parseInt(m.minute, 10);
+        }
+        // Work starts at 08:00 AM — anything after that counts as late
+        function isLateNow() { return getIraqMinutesNow() > 8 * 60; }
 
         function getIraqLocalDateString(date = new Date()) {
             try {
@@ -407,20 +544,38 @@
         }
 
         // هێنانی داتا لە ڕێگەی doGet (Google Apps Script) لە کاتی باربوونی پەڕەکە یان لۆگیندا
+        function updateVersionWarning() {
+            const el = document.getElementById('version-warning');
+            if (!el) return;
+            el.classList.toggle('hidden', scriptVersion === REQUIRED_SCRIPT_VERSION);
+        }
+
+        // After saving, re-read the sheet and make sure the location really arrived there.
+        async function verifyLocationSaved(recId, field, sentValue) {
+            if (!safeUrl(sentValue)) return true;           // nothing to verify ("Unavailable")
+            await fetchSheetData();
+            const rec = attendanceRecords.find(x => String(x.id) === String(recId));
+            return !!(rec && safeUrl(rec[field]));
+        }
+
+        const LOCATION_NOT_SAVED_MSG = "⚠️ Your location was captured, but the Google Sheet did NOT save it.\n\nThe Google Apps Script is an old version. Ask the admin to open Apps Script → Deploy → Manage deployments → Edit → Version: New version → Deploy.";
+
         async function fetchSheetData() {
             try {
                 const response = await fetch(SCRIPT_URL);
                 const data = await response.json();
+                scriptVersion = data.version || "";
+                updateVersionWarning();
                 
                 if (data.attendance && data.attendance.length > 1) {
                     let rawAtt = data.attendance.slice(1).map(row => ({
-                        id: String(row[0]), name: row[1], date: row[2], checkIn: row[3], checkOut: row[4], status: row[5], note: row[6]
+                        id: String(row[0]), name: row[1], date: row[2], checkIn: row[3], checkOut: row[4], status: row[5], note: row[6], location: row[7], checkoutLocation: row[8]
                     }));
                     attendanceRecords = processAutoCheckouts(rawAtt);
                 }
                 if (data.leaves && data.leaves.length > 1) {
                     leaveRequests = data.leaves.slice(1).map(row => ({
-                        id: String(row[0]), name: row[1], type: row[2], dates: row[3], note: row[4], fileName: row[5], status: row[6]
+                        id: String(row[0]), name: row[1], type: row[2], dates: row[3], note: row[4], fileName: row[5], status: row[6], fileUrl: row[7]
                     }));
                 }
                 if (data.holidays && data.holidays.length > 1) {
@@ -451,10 +606,45 @@
             }
         }
 
-        // لە کاتی کردنەوەی پەڕەکە (Page Load / Refresh) ڕاستەوخۆ داتاکان لە شیتەوە دەهێنرێن
+        // لە کاتی کردنەوەی پەڕەکە (Page Load / Refresh) داتا دەهێنرێت و سێشنی پاشەکەوتکراو دەگەڕێندرێتەوە
         window.addEventListener('DOMContentLoaded', async () => {
             await fetchSheetData();
+            restoreSession();
+            setInterval(() => { if (currentUser) checkTodayAttendanceState(); }, 30000);
         });
+
+        function restoreSession() {
+            const s = loadSession();
+            document.getElementById('session-loading').classList.add('hidden');
+
+            if (!s) { showLoginView(); return; }
+
+            if (s.role === 'admin') {
+                showAdminDashboard(s.tab || 'attendance');
+            } else if (s.role === 'user' && s.name) {
+                // if the users list loaded and this user no longer exists, drop the session
+                if (systemUsers.length > 0 && !systemUsers.some(u => u.name === s.name)) {
+                    clearSession();
+                    showLoginView();
+                    return;
+                }
+                currentUser = s.name;
+                setupUserDashboardSession(s.page || 'home');
+            } else {
+                clearSession();
+                showLoginView();
+            }
+        }
+
+        function showLoginView() {
+            const container = document.getElementById('app-container');
+            container.classList.remove('max-w-3xl');
+            container.classList.add('max-w-md');
+            document.getElementById('session-loading').classList.add('hidden');
+            document.getElementById('user-dashboard').classList.add('hidden');
+            document.getElementById('admin-dashboard').classList.add('hidden');
+            document.getElementById('login-view').classList.remove('hidden');
+        }
 
         async function handleLogin() {
             const u = document.getElementById('login-user').value.trim();
@@ -464,52 +654,91 @@
             await fetchSheetData();
 
             const foundUser = systemUsers.find(x => x.username === u && x.password === p);
-            const container = document.getElementById('app-container');
 
             if ((u === 'admin' && p === 'admin123') || (foundUser && foundUser.role && foundUser.role.toLowerCase() === 'admin')) {
-                container.classList.remove('max-w-md');
-                container.classList.add('max-w-3xl');
-                document.getElementById('login-view').classList.add('hidden');
-                document.getElementById('admin-dashboard').classList.remove('hidden');
-                
-                document.getElementById('admin-filter-month').value = getIraqLocalDateString().slice(0, 7);
-                updateAdminDashboard();
+                saveSession({ role: 'admin', name: foundUser ? foundUser.name : 'admin', tab: 'attendance' });
+                showAdminDashboard('attendance');
                 return;
             }
 
             if (foundUser) {
                 currentUser = foundUser.name;
-                setupUserDashboardSession();
+                saveSession({ role: 'user', name: foundUser.name, page: 'home' });
+                setupUserDashboardSession('home');
             } else {
                 alert('Invalid username or password!');
             }
         }
 
-        function setupUserDashboardSession() {
+        function showAdminDashboard(tab) {
+            const container = document.getElementById('app-container');
+            container.classList.remove('max-w-md');
+            container.classList.add('max-w-3xl');
+            document.getElementById('login-view').classList.add('hidden');
+            document.getElementById('session-loading').classList.add('hidden');
+            document.getElementById('user-dashboard').classList.add('hidden');
+            document.getElementById('admin-dashboard').classList.remove('hidden');
+
+            document.getElementById('admin-filter-month').value = getIraqLocalDateString().slice(0, 7);
+            updateAdminDashboard();
+            switchAdminTab(tab || 'attendance');
+        }
+
+        function setupUserDashboardSession(page) {
             const container = document.getElementById('app-container');
             document.getElementById('user-display-name').innerText = currentUser;
 
-            container.classList.add('max-w-md');
-            document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('user-dashboard').classList.remove('hidden');
-            
-            document.getElementById('user-calendar-month').value = getIraqLocalDateString().slice(0, 7);
-            
-            checkTodayAttendanceState();
-            refreshUserDashboardViews();
-            toggleLeaveFileField();
-        }
-
-        function logout() {
-            const container = document.getElementById('app-container');
             container.classList.remove('max-w-3xl');
             container.classList.add('max-w-md');
             document.getElementById('login-view').classList.add('hidden');
-            document.getElementById('user-dashboard').classList.add('hidden');
+            document.getElementById('session-loading').classList.add('hidden');
             document.getElementById('admin-dashboard').classList.add('hidden');
+            document.getElementById('user-dashboard').classList.remove('hidden');
+
+            const thisMonth = getIraqLocalDateString().slice(0, 7);
+            document.getElementById('user-calendar-month').value = thisMonth;
+            document.getElementById('user-leave-month').value = thisMonth;
+
+            checkTodayAttendanceState();
+            refreshUserDashboardViews();
+            toggleLeaveFileField();
+            switchUserPage(page || 'home');
+        }
+
+        function switchUserPage(page) {
+            const home = document.getElementById('user-page-home');
+            const leave = document.getElementById('user-page-leave');
+            const navHome = document.getElementById('user-nav-home');
+            const navLeave = document.getElementById('user-nav-leave');
+            const active = "py-3.5 text-indigo-600 border-t-2 border-indigo-600 -mt-px bg-indigo-50/50";
+            const inactive = "py-3.5 text-slate-400 hover:text-slate-600 border-t-2 border-transparent -mt-px";
+
+            if (page === 'leave') {
+                home.classList.add('hidden');
+                leave.classList.remove('hidden');
+                navHome.className = inactive;
+                navLeave.className = active;
+                renderUserMyLeaves();
+            } else {
+                page = 'home';
+                leave.classList.add('hidden');
+                home.classList.remove('hidden');
+                navHome.className = active;
+                navLeave.className = inactive;
+                checkTodayAttendanceState();
+                renderUserMonthlyCalendar();
+            }
+            updateSession({ page });
+        }
+
+        function logout() {
+            clearSession();
+            currentUser = "";
+            currentDrilldownUser = "";
             document.getElementById('login-user').value = '';
             document.getElementById('login-pass').value = '';
-            currentUser = "";
+            document.getElementById('user-checkin-note').value = '';
+            showLoginView();
         }
 
         function onUserMonthChange() {
@@ -543,20 +772,25 @@
             renderUserMyLeaves();
         }
 
+        // clickable link to the uploaded PDF / image (falls back to plain file name for old requests)
+        function leaveFileHtml(req, label) {
+            const url = safeUrl(req.fileUrl);
+            if (url) {
+                return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener" class="inline-block mt-1 px-2 py-1 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded-lg text-[10px] font-semibold hover:bg-indigo-100">📄 ${label || 'View file'}${req.fileName ? ' — ' + escapeHtml(req.fileName) : ''}</a>`;
+            }
+            if (req.fileName) return `<p class="text-[10px] text-slate-400 font-mono mt-0.5">📎 ${escapeHtml(req.fileName)} (file not available)</p>`;
+            return '';
+        }
+
         function renderUserMyLeaves() {
             const container = document.getElementById('user-my-leaves-list');
-            const selectedYM = document.getElementById('user-calendar-month').value; 
-            
-            if (leaveFilterByMonth) {
-                document.getElementById('user-leave-month-label').innerText = `(${selectedYM})`;
-            } else {
-                document.getElementById('user-leave-month-label').innerText = `(All)`;
-            }
+            const selectedYM = document.getElementById('user-leave-month').value;
+            document.getElementById('user-leave-month').style.display = leaveFilterByMonth ? '' : 'none';
             
             container.innerHTML = '';
             
             let myLeaves = leaveRequests.filter(x => x.name === currentUser);
-            if (leaveFilterByMonth) {
+            if (leaveFilterByMonth && selectedYM) {
                 myLeaves = myLeaves.filter(x => x.dates && x.dates.includes(selectedYM));
             }
 
@@ -576,7 +810,7 @@
                             <p class="font-bold text-slate-700">${req.type || req.leaveType}</p>
                             <p class="text-[10px] text-slate-400">${req.dates}</p>
                             ${req.note ? `<p class="text-[10px] text-slate-600 mt-0.5">Note: ${req.note}</p>` : ''}
-                            ${req.fileName ? `<p class="text-[10px] text-indigo-600 font-mono mt-0.5">📎 ${req.fileName}</p>` : ''}
+                            ${leaveFileHtml(req, 'View my file')}
                         </div>
                         <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeColor}">${req.status}</span>
                     </div>
@@ -619,7 +853,7 @@
                 const rec = myRecords.find(r => formatDate(r.date) === fullDate);
 
                 if (isHoliday) {
-                    bgClass = "bg-slate-300 text-slate-700 font-bold";
+                    bgClass = "bg-slate-600 text-white font-bold";
                     titleAttr = "Holiday / Rest Day";
                 } else if (rec) {
                     let inTime = formatTime(rec.checkIn);
@@ -651,8 +885,13 @@
                     }
                 }
 
+                const locUrl = rec ? safeUrl(rec.location) : '';
+                if (locUrl) titleAttr += ' | 📍 click to open check-in location';
+                if (rec && safeUrl(rec.checkoutLocation)) titleAttr += ' | check-out location is in the Master table';
+                const clickAttr = locUrl ? `onclick="window.open('${escapeHtml(locUrl)}', '_blank', 'noopener')"` : '';
+
                 grid.innerHTML += `
-                    <div title="${titleAttr}" class="aspect-square rounded-xl flex flex-col items-center justify-center text-xs ${bgClass} shadow-xs cursor-pointer p-0.5">
+                    <div title="${titleAttr}" ${clickAttr} class="aspect-square rounded-xl flex flex-col items-center justify-center text-xs ${bgClass} shadow-xs cursor-pointer p-0.5">
                         ${displayContent}
                     </div>
                 `;
@@ -666,6 +905,7 @@
             const btnText = document.getElementById('user-btn-text');
 
             if (!badge || !btn || !btnText) return;
+            const noteWrapper = document.getElementById('user-note-wrapper');
 
             const existingRec = attendanceRecords.find(x => {
                 if (!x.name || !x.date) return false;
@@ -676,6 +916,13 @@
 
             const hasCheckedIn = existingRec && existingRec.checkIn && existingRec.checkIn !== '-' && !existingRec.checkIn.includes('1899');
             const hasCheckedOut = existingRec && existingRec.checkOut && existingRec.checkOut !== '-' && !existingRec.checkOut.includes('1899');
+
+            // the reason box appears ONLY when the user hasn't checked in yet AND it is already after 8:00 AM
+            if (!hasCheckedIn && isLateNow()) {
+                noteWrapper.classList.remove('hidden');
+            } else {
+                noteWrapper.classList.add('hidden');
+            }
 
             if (hasCheckedIn && hasCheckedOut) {
                 const outTime = formatTime(existingRec.checkOut);
@@ -720,25 +967,60 @@
             }
 
             if (!existingRec || !hasCheckedIn) {
+                const late = isLateNow();
+                if (late && !note) {
+                    alert("You are late (after 8:00 AM). Please write the reason first.");
+                    document.getElementById('user-checkin-note').focus();
+                    return;
+                }
+
+                // ---- capture the location right now ----
+                const actionBtn = document.getElementById('user-action-btn');
+                const actionBtnText = document.getElementById('user-btn-text');
+                actionBtn.disabled = true;
+                actionBtnText.innerText = "📍 Getting your location...";
+
+                let locationLink = '';
+                try {
+                    const pos = await getCurrentLocation();
+                    locationLink = buildMapsLink(pos.lat, pos.lng);
+                } catch (err) {
+                    if (REQUIRE_LOCATION) {
+                        alert("Check-in cancelled.\n\n" + err.message);
+                        checkTodayAttendanceState();
+                        return;
+                    }
+                    locationLink = 'Unavailable';
+                }
+
                 const newRec = {
                     id: String(Date.now()),
                     name: currentUser,
                     date: todayStr,
                     checkIn: currentTime,
                     checkOut: "-",
-                    status: note ? "Late" : "Present",
-                    note: note
+                    status: late ? "Late" : "Present",
+                    note: late ? note : "",
+                    location: locationLink
                 };
                 
                 attendanceRecords.push(newRec);
                 await sendToSheet({ type: 'attendance', ...newRec });
+                document.getElementById('user-checkin-note').value = '';
 
                 checkTodayAttendanceState();
                 refreshUserDashboardViews();
-                alert("Successfully Checked-In and synced!");
+                const savedIn = await verifyLocationSaved(newRec.id, 'location', newRec.location);
+                checkTodayAttendanceState();
+                refreshUserDashboardViews();
+                alert(savedIn ? "Successfully Checked-In and synced!\n📍 Location saved." : "Checked-in, but:\n\n" + LOCATION_NOT_SAVED_MSG);
             } else if (hasCheckedIn && !hasCheckedOut) {
+                const checkoutLoc = await captureLocationLink("Check-out");
+                if (checkoutLoc === null) return;
+
                 const checkoutTime = getCheckoutISOString(existingRec.checkIn);
                 existingRec.checkOut = checkoutTime;
+                existingRec.checkoutLocation = checkoutLoc;
 
                 await sendToSheet({ 
                     type: 'attendance', 
@@ -748,12 +1030,16 @@
                     checkIn: existingRec.checkIn, 
                     checkOut: checkoutTime,        
                     status: existingRec.status,
-                    note: existingRec.note
+                    note: existingRec.note,
+                    checkoutLocation: checkoutLoc
                 });
 
                 checkTodayAttendanceState();
                 refreshUserDashboardViews();
-                alert("Successfully Checked-Out!");
+                const savedOut = await verifyLocationSaved(existingRec.id, 'checkoutLocation', checkoutLoc);
+                checkTodayAttendanceState();
+                refreshUserDashboardViews();
+                alert(savedOut ? "Successfully Checked-Out!\n📍 Location saved." : "Checked-out, but:\n\n" + LOCATION_NOT_SAVED_MSG);
             }
         }
 
@@ -763,6 +1049,7 @@
             const end = document.getElementById('leave-end').value;
             const note = document.getElementById('leave-note').value.trim();
             const fileInput = document.getElementById('leave-file');
+            const submitBtn = document.getElementById('leave-submit-btn');
 
             if (!start || !end) {
                 alert("Please select start and end dates.");
@@ -770,37 +1057,72 @@
             }
 
             let fileName = '';
-            if (type === 'Sick Leave') {
-                if (fileInput.files.length === 0) {
-                    alert("A medical report is mandatory for Sick Leave!");
-                    return;
-                }
-                fileName = fileInput.files[0].name;
+            let fileMime = '';
+            let fileData = '';
+            const file = fileInput.files.length > 0 ? fileInput.files[0] : null;
+
+            if (type === 'Sick Leave' && !file) {
+                alert("A medical report is mandatory for Sick Leave!");
+                return;
             }
 
-            const newLeave = {
-                id: String(Date.now()),
-                name: currentUser,
-                leaveType: type,
-                dates: `${start} to ${end}`,
-                note: note,
-                fileName: fileName,
-                status: "Pending"
-            };
+            if (file) {
+                const okType = file.type === 'application/pdf' || file.type.startsWith('image/');
+                if (!okType) {
+                    alert("Only PDF or image files are allowed.");
+                    return;
+                }
+                if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+                    alert(`The file is too large. Maximum size is ${MAX_UPLOAD_MB} MB.`);
+                    return;
+                }
+            }
 
-            leaveRequests.push(newLeave);
-            await sendToSheet({ type: 'leave', ...newLeave });
+            const originalBtnText = submitBtn.innerText;
+            submitBtn.disabled = true;
+            submitBtn.innerText = file ? "Uploading file..." : "Submitting...";
 
-            document.getElementById('leave-note').value = '';
-            fileInput.value = '';
+            try {
+                if (file) {
+                    fileName = file.name;
+                    fileMime = file.type;
+                    fileData = await readFileAsBase64(file);
+                }
 
-            refreshUserDashboardViews(); 
-            alert("Leave application submitted successfully!");
+                const newLeave = {
+                    id: String(Date.now()),
+                    name: currentUser,
+                    leaveType: type,
+                    dates: `${start} to ${end}`,
+                    note: note,
+                    fileName: fileName,
+                    status: "Pending"
+                };
+
+                leaveRequests.push({ ...newLeave, type: type });
+                await sendToSheet({ type: 'leave', ...newLeave, fileMime, fileData });
+
+                document.getElementById('leave-note').value = '';
+                fileInput.value = '';
+
+                // re-fetch so the uploaded file's link (saved by the server) shows up right away
+                await fetchSheetData();
+                refreshUserDashboardViews();
+                alert("Leave application submitted successfully!");
+            } catch (err) {
+                console.error(err);
+                alert("Could not submit the request: " + err.message);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerText = originalBtnText;
+            }
         }
 
         let currentDrilldownUser = "";
 
         function switchAdminTab(tab) {
+            if (!['attendance', 'leaves', 'users', 'holidays'].includes(tab)) tab = 'attendance';
+            updateSession({ tab });
             closeAdminDrilldown();
             const att = document.getElementById('admin-tab-attendance');
             const lea = document.getElementById('admin-tab-leaves');
@@ -914,6 +1236,9 @@
                         <td class="p-2.5 font-mono text-slate-600">${cleanDateVal}</td>
                         <td class="p-2.5 text-slate-600">
                             ${inTimeStr} / ${outTimeStr}
+                            ${safeUrl(row.location) ? `<br><a href="${escapeHtml(safeUrl(row.location))}" target="_blank" rel="noopener" class="text-[10px] text-indigo-600 font-semibold hover:underline">📍 Check-in location</a>` : ''}
+                            ${(!safeUrl(row.location) && row.checkIn && row.checkIn !== '-') ? `<br><span class="text-[10px] text-slate-400">📍 no check-in location recorded</span>` : ''}
+                            ${safeUrl(row.checkoutLocation) ? `<br><a href="${escapeHtml(safeUrl(row.checkoutLocation))}" target="_blank" rel="noopener" class="text-[10px] text-rose-600 font-semibold hover:underline">📍 Check-out location</a>` : ''}
                             ${row.note ? `<br><span class="text-[10px] text-amber-600 font-semibold">Note: ${row.note}</span>` : ''}
                         </td>
                         <td class="p-2.5"><span class="px-2 py-0.5 ${color} rounded text-[10px] font-semibold">${row.status}</span></td>
@@ -985,27 +1310,50 @@
 
         function renderAdminLeaves() {
             const container = document.getElementById('admin-leaves-list');
+            const statusSel = document.getElementById('admin-leave-status-filter');
+            const userSel = document.getElementById('admin-leave-user-filter');
+
+            // rebuild the employee filter from the real data (keeping the current selection)
+            const prevUser = userSel.value || 'all';
+            const names = [...new Set(leaveRequests.map(x => x.name).filter(Boolean))].sort((a, b) => String(a).localeCompare(String(b)));
+            userSel.innerHTML = '<option value="all">All Employees</option>' +
+                names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+            userSel.value = names.includes(prevUser) ? prevUser : 'all';
+
+            let list = leaveRequests.slice();
+            if (statusSel.value !== 'all') list = list.filter(x => x.status === statusSel.value);
+            if (userSel.value !== 'all') list = list.filter(x => x.name === userSel.value);
+            list.sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0)); // newest first
+
+            document.getElementById('admin-leave-count').innerText = `${list.length} request(s)`;
             container.innerHTML = '';
-            
-            const pendingLeaves = leaveRequests.filter(x => x.status === 'Pending');
-            if (pendingLeaves.length === 0) {
-                container.innerHTML = `<div class="p-4 text-center text-slate-400 bg-white rounded-2xl border text-xs">No pending leave requests</div>`;
+
+            if (list.length === 0) {
+                container.innerHTML = `<div class="p-4 text-center text-slate-400 bg-white rounded-2xl border text-xs">No leave requests found</div>`;
                 return;
             }
 
-            pendingLeaves.forEach(req => {
+            list.forEach(req => {
+                let badgeColor = "bg-amber-100 text-amber-700 border-amber-200";
+                if (req.status === 'Approved') badgeColor = "bg-emerald-100 text-emerald-700 border-emerald-200";
+                if (req.status === 'Rejected') badgeColor = "bg-rose-100 text-rose-700 border-rose-200";
+
+                const actions = req.status === 'Pending'
+                    ? `<div class="flex gap-1.5">
+                            <button onclick="handleLeaveAction('${escapeHtml(req.id)}', 'Approved')" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold">Approve</button>
+                            <button onclick="handleLeaveAction('${escapeHtml(req.id)}', 'Rejected')" class="bg-rose-100 text-rose-600 px-2.5 py-1 rounded-lg font-semibold">Reject</button>
+                       </div>`
+                    : `<span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border ${badgeColor}">${escapeHtml(req.status)}</span>`;
+
                 container.innerHTML += `
-                    <div class="bg-white p-3 rounded-2xl border border-slate-100 flex justify-between items-center text-xs shadow-sm">
+                    <div class="bg-white p-3 rounded-2xl border border-slate-100 flex justify-between items-center gap-2 text-xs shadow-sm">
                         <div>
-                            <p class="font-bold text-slate-800">${req.name} <span class="font-normal text-slate-500">(${req.type || req.leaveType})</span></p>
-                            <p class="text-[10px] text-slate-400">Duration: ${req.dates}</p>
-                            ${req.note ? `<p class="text-[10px] text-slate-600 mt-0.5">Note: ${req.note}</p>` : ''}
-                            ${req.fileName ? `<p class="text-[10px] text-indigo-600 font-mono mt-0.5">📎 File: ${req.fileName}</p>` : ''}
+                            <p class="font-bold text-slate-800">${escapeHtml(req.name)} <span class="font-normal text-slate-500">(${escapeHtml(req.type || req.leaveType)})</span></p>
+                            <p class="text-[10px] text-slate-400">Duration: ${escapeHtml(req.dates)}</p>
+                            ${req.note ? `<p class="text-[10px] text-slate-600 mt-0.5">Note: ${escapeHtml(req.note)}</p>` : ''}
+                            ${leaveFileHtml(req, 'View report / photo')}
                         </div>
-                        <div class="flex gap-1.5">
-                            <button onclick="handleLeaveAction('${req.id}', 'Approved')" class="bg-emerald-600 text-white px-2.5 py-1 rounded-lg font-semibold">Approve</button>
-                            <button onclick="handleLeaveAction('${req.id}', 'Rejected')" class="bg-rose-100 text-rose-600 px-2.5 py-1 rounded-lg font-semibold">Reject</button>
-                        </div>
+                        ${actions}
                     </div>
                 `;
             });
@@ -1079,12 +1427,13 @@
         }
 
         function exportExcel() {
-            let csv = "data:text/csv;charset=utf-8,Name,Date,Check-In,Check-Out,Status,Note\n";
+            const q = v => `"${String(v == null ? '' : v).replace(/"/g, '""')}"`;
+            let csv = "data:text/csv;charset=utf-8,Name,Date,Check-In,Check-Out,Status,Note,Check-In Location,Check-Out Location\n";
             attendanceRecords.forEach(r => {
-                csv += `${r.name},${formatDate(r.date)},${formatTime(r.checkIn)},${formatTime(r.checkOut)},${r.status},${r.note || ''}\n`;
+                csv += [q(r.name), formatDate(r.date), formatTime(r.checkIn), formatTime(r.checkOut), q(r.status), q(r.note), q(r.location), q(r.checkoutLocation)].join(',') + "\n";
             });
             const link = document.createElement("a");
-            link.setAttribute("href", encodeURI(csv));
+            link.setAttribute("href", encodeURI(csv).replace(/#/g, '%23'));
             link.setAttribute("download", `Runaki_Attendance_Report.csv`);
             document.body.appendChild(link);
             link.click();
